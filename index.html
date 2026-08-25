@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f8fc">
+  <meta name="description" content="为个人运营者设计的本地用户增长档案台">
+  <title>用户增长档案台 · User Atlas</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <div class="app-shell">
+    <header class="topbar reveal reveal-1">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg class="fish-logo" viewBox="0 0 48 48">
+            <path d="M7 24C13.5 14.5 25.5 11.5 36 18.5L43 14.5V33.5L36 29.5C25.5 36.5 13.5 33.5 7 24Z"></path>
+            <path d="M17 20.5C20.5 23.5 20.5 24.5 17 27.5"></path>
+            <circle cx="31.5" cy="22.5" r="1.4"></circle>
+          </svg>
+        </div>
+        <div>
+          <p class="eyebrow">USER ATLAS</p>
+          <h1>用户增长档案台</h1>
+          
+        </div>
+      </div>
+      <time class="date-stamp" id="dateStamp" aria-label="今天日期"></time>
+    </header>
+
+    <main id="main">
+      <section class="stats reveal reveal-2" aria-label="用户统计">
+        <article class="stat">
+          <span class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </span>
+          <span class="stat-label">总人数</span>
+          <strong id="statTotal">3</strong>
+          <small>已记录用户</small>
+        </article>
+        <article class="stat">
+          <span class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"></path></svg>
+          </span>
+          <span class="stat-label">S级用户</span>
+          <strong id="statA">0</strong>
+          <small>最高价值关系</small>
+        </article>
+        <article class="stat">
+          <span class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+          </span>
+          <span class="stat-label">本月新增</span>
+          <strong id="statNew">2</strong>
+          <small>持续认识新朋友</small>
+        </article>
+      </section>
+
+      <nav class="view-tabs reveal reveal-3" aria-label="页面切换">
+        <button class="view-tab" type="button" data-view-target="profiles" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"></path><path d="M3 6h.01M3 12h.01M3 18h.01"></path></svg>
+          用户档案
+        </button>
+        <button class="view-tab" type="button" data-view-target="live" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"></path><path d="m7 15 4-4 3 3 5-7"></path></svg>
+          直播趋势
+        </button>
+      </nav>
+
+      <section class="workspace reveal reveal-3" data-view="profiles">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+            <label class="sr-only" for="search">搜索昵称</label>
+            <input class="search" id="search" type="search" placeholder="搜索昵称…" autocomplete="off">
+          </div>
+          <div class="filter-row" role="group" aria-label="按用户分层筛选">
+            <button class="filter-btn" type="button" data-tier="全部" aria-pressed="true">全部</button>
+            <button class="filter-btn" type="button" data-tier="S" aria-pressed="false"><span class="tier-dot tier-dot-s"></span>S 级</button>
+            <button class="filter-btn" type="button" data-tier="A" aria-pressed="false"><span class="tier-dot tier-dot-a"></span>A 级</button>
+            <button class="filter-btn" type="button" data-tier="B" aria-pressed="false"><span class="tier-dot tier-dot-b"></span>B 级</button>
+            <button class="filter-btn" type="button" data-tier="C" aria-pressed="false"><span class="tier-dot tier-dot-c"></span>C 级</button>
+          </div>
+          <button class="primary-btn" id="addUserBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+            新增用户
+          </button>
+        </div>
+
+        <section class="list-area" aria-labelledby="listTitle">
+          <div class="list-head">
+            <div>
+              <p class="section-kicker">USER NOTES</p>
+              <h2 id="listTitle">我的用户</h2>
+            </div>
+            <span class="result-count" id="resultCount" aria-live="polite">3 位</span>
+          </div>
+          <div class="user-grid" id="userGrid" aria-live="polite"></div>
+        </section>
+
+        <aside class="import-panel" aria-labelledby="importTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">LIVE CAPTURE</p>
+              <h2 id="importTitle">直播记录</h2>
+            </div>
+            <span class="hand-note">智能录入</span>
+          </div>
+          <div class="input-stack">
+            <div>
+              <label class="field-label" for="liveText">直播文字或用户描述</label>
+              <textarea id="liveText" placeholder="例如：小满，支持率 35%，总消费金额 5600，单次消费 600，愿意接话，直播间聊天积极…"></textarea>
+            </div>
+            <label class="dropzone" id="dropzone">
+              <input id="imageInput" type="file" accept="image/*">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
+              <strong>上传聊天或直播截图</strong>
+              <small>点击选择或拖拽图片</small>
+            </label>
+            <div class="image-preview-wrap" id="previewWrap" hidden="">
+              <img id="imagePreview" alt="待识别图片预览">
+              <span id="imageName"></span>
+            </div>
+            <div class="progress" id="recognizeProgress" hidden="" aria-label="图片识别进度">
+              <span id="progressBar"></span>
+            </div>
+            <p class="hint" id="importHint">原型会模拟识别图片文字，结果可在记录前编辑。</p>
+            <div class="import-actions">
+              <button class="secondary-btn" id="recognizeBtn" type="button">识别图片</button>
+              <button class="primary-btn" id="parseBtn" type="button">解析并记录</button>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="trend-page reveal reveal-3" data-view="live" hidden="" aria-labelledby="trendTitle">
+        <div class="trend-head">
+          <div>
+            <p class="section-kicker">LIVE ANALYTICS</p>
+            <h2 id="trendTitle">直播数据趋势</h2>
+          </div>
+          <span class="hand-note">Mock Data</span>
+        </div>
+
+        <section class="trend-section" aria-labelledby="dailyTrendTitle">
+          <div class="trend-section-head">
+            <div>
+              <p class="section-kicker">DAY</p>
+              <h3 id="dailyTrendTitle">日维度</h3>
+            </div>
+            <span class="trend-period" id="dailyPeriod">今日</span>
+          </div>
+          <div class="metric-grid metric-grid-five" id="dailyMetrics">
+      <article class="metric-card">
+        <span>日收入</span>
+        <strong>¥12,860</strong>
+        <small>今日直播成交</small>
+      </article>
+      <article class="metric-card">
+        <span>付费用户数</span>
+        <strong>42 人</strong>
+        <small>完成支付的用户</small>
+      </article>
+      <article class="metric-card">
+        <span>首次付费用户</span>
+        <strong>18 人</strong>
+        <small>首次完成支付</small>
+      </article>
+      <article class="metric-card">
+        <span>S级用户付费率</span>
+        <strong>46%</strong>
+        <small>S级用户收入 / 总收入</small>
+      </article>
+      <article class="metric-card">
+        <span>新增潜力用户数</span>
+        <strong>27 人</strong>
+        <small>新增 A/B 潜力池</small>
+      </article></div>
+        </section>
+
+        <section class="trend-columns">
+          <article class="trend-section" aria-labelledby="weeklyTrendTitle">
+            <div class="trend-section-head">
+              <div>
+                <p class="section-kicker">WEEK</p>
+                <h3 id="weeklyTrendTitle">周维度</h3>
+              </div>
+            </div>
+            <div class="metric-grid compact" id="weeklyMetrics">
+      <article class="metric-card">
+        <span>周收入</span>
+        <strong>¥76,420</strong>
+        <small>本周累计</small>
+      </article>
+      <article class="metric-card">
+        <span>新增潜力用户数</span>
+        <strong>136 人</strong>
+        <small>本周新增</small>
+      </article></div>
+            <div class="chart-card">
+              <div class="chart-title">
+                <span>收入趋势图</span>
+                <small>近 7 天</small>
+              </div>
+              <div id="weeklyChart">
+      <svg class="trend-chart" viewBox="0 0 640 220" role="img" aria-label="收入趋势图">
+        <defs>
+          <linearGradient id="weeklyRevenueGradient" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#12b8c8" stop-opacity=".22"></stop>
+            <stop offset="100%" stop-color="#12b8c8" stop-opacity="0"></stop>
+          </linearGradient>
+        </defs>
+        <path class="chart-grid" d="M 24 28 H 616 M 24 105 H 616 M 24 182 H 616"></path>
+        <path class="chart-area" fill="url(#weeklyRevenueGradient)" d="M 24.0 131.5 L 122.7 90.2 L 221.3 112.5 L 320.0 52.1 L 418.7 66.7 L 517.3 28.0 L 616.0 182.0 L 616.0 182 L 24.0 182 Z"></path>
+        <path class="chart-line" d="M 24.0 131.5 L 122.7 90.2 L 221.3 112.5 L 320.0 52.1 L 418.7 66.7 L 517.3 28.0 L 616.0 182.0"></path>
+        
+          <circle class="chart-dot" cx="24.0" cy="131.5" r="4"></circle>
+          <text class="chart-label" x="24.0" y="206" text-anchor="middle">周一</text>
+        
+          <circle class="chart-dot" cx="122.7" cy="90.2" r="4"></circle>
+          <text class="chart-label" x="122.7" y="206" text-anchor="middle">周二</text>
+        
+          <circle class="chart-dot" cx="221.3" cy="112.5" r="4"></circle>
+          <text class="chart-label" x="221.3" y="206" text-anchor="middle">周三</text>
+        
+          <circle class="chart-dot" cx="320.0" cy="52.1" r="4"></circle>
+          <text class="chart-label" x="320.0" y="206" text-anchor="middle">周四</text>
+        
+          <circle class="chart-dot" cx="418.7" cy="66.7" r="4"></circle>
+          <text class="chart-label" x="418.7" y="206" text-anchor="middle">周五</text>
+        
+          <circle class="chart-dot" cx="517.3" cy="28.0" r="4"></circle>
+          <text class="chart-label" x="517.3" y="206" text-anchor="middle">周六</text>
+        
+          <circle class="chart-dot" cx="616.0" cy="182.0" r="4"></circle>
+          <text class="chart-label" x="616.0" y="206" text-anchor="middle">周日</text>
+        
+        <text class="chart-value" x="616.0" y="172.0" text-anchor="end">¥5,420</text>
+      </svg></div>
+            </div>
+          </article>
+
+          <article class="trend-section" aria-labelledby="monthlyTrendTitle">
+            <div class="trend-section-head">
+              <div>
+                <p class="section-kicker">MONTH</p>
+                <h3 id="monthlyTrendTitle">月维度</h3>
+              </div>
+            </div>
+            <div class="metric-grid compact" id="monthlyMetrics">
+      <article class="metric-card">
+        <span>月收入</span>
+        <strong>¥318,900</strong>
+        <small>本月累计</small>
+      </article>
+      <article class="metric-card">
+        <span>新增潜力用户数</span>
+        <strong>528 人</strong>
+        <small>本月新增</small>
+      </article></div>
+            <div class="chart-card">
+              <div class="chart-title">
+                <span>收入趋势图</span>
+                <small>近 4 周</small>
+              </div>
+              <div id="monthlyChart">
+      <svg class="trend-chart" viewBox="0 0 640 220" role="img" aria-label="收入趋势图">
+        <defs>
+          <linearGradient id="monthlyRevenueGradient" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#12b8c8" stop-opacity=".22"></stop>
+            <stop offset="100%" stop-color="#12b8c8" stop-opacity="0"></stop>
+          </linearGradient>
+        </defs>
+        <path class="chart-grid" d="M 24 28 H 616 M 24 105 H 616 M 24 182 H 616"></path>
+        <path class="chart-area" fill="url(#monthlyRevenueGradient)" d="M 24.0 182.0 L 221.3 114.4 L 418.7 84.0 L 616.0 28.0 L 616.0 182 L 24.0 182 Z"></path>
+        <path class="chart-line" d="M 24.0 182.0 L 221.3 114.4 L 418.7 84.0 L 616.0 28.0"></path>
+        
+          <circle class="chart-dot" cx="24.0" cy="182.0" r="4"></circle>
+          <text class="chart-label" x="24.0" y="206" text-anchor="middle">第1周</text>
+        
+          <circle class="chart-dot" cx="221.3" cy="114.4" r="4"></circle>
+          <text class="chart-label" x="221.3" y="206" text-anchor="middle">第2周</text>
+        
+          <circle class="chart-dot" cx="418.7" cy="84.0" r="4"></circle>
+          <text class="chart-label" x="418.7" y="206" text-anchor="middle">第3周</text>
+        
+          <circle class="chart-dot" cx="616.0" cy="28.0" r="4"></circle>
+          <text class="chart-label" x="616.0" y="206" text-anchor="middle">第4周</text>
+        
+        <text class="chart-value" x="616.0" y="18.0" text-anchor="end">¥99,680</text>
+      </svg></div>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="userDialog" aria-labelledby="userDialogTitle">
+    <form id="userForm" novalidate="">
+      <div class="dialog-head">
+        <div>
+          <p class="section-kicker">PROFILE</p>
+          <h2 id="userDialogTitle">新增用户</h2>
+        </div>
+        <button class="icon-btn" type="button" data-close="userDialog" aria-label="关闭弹窗">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <input id="userId" type="hidden">
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="field-label" for="nickname">昵称 <span aria-hidden="true">*</span></label>
+            <input id="nickname" type="text" required="" maxlength="30" aria-describedby="nicknameError">
+            <p class="form-error" id="nicknameError"></p>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="level">等级</label>
+            <input id="level" type="text" placeholder="如：金卡会员 / 新用户">
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="tier">当前分层（保存后自动重算）</label>
+            <select id="tier" disabled>
+              <option value="S">S · 最高价值用户</option>
+              <option value="A">A · 核心用户</option>
+              <option value="B">B · 高潜用户</option>
+              <option value="C">C · 占榜聊天用户</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="occupation">职业</label>
+            <input id="occupation" type="text" placeholder="如：品牌设计师">
+          </div>
+          <div class="form-field full">
+            <span class="field-label">核心标签（最多 3 个）</span>
+            <div class="check-grid" id="tagOptions"></div>
+            <p class="form-error" id="tagsError"></p>
+          </div>
+          <div class="form-field full">
+            <label class="field-label" for="interests">兴趣</label>
+            <input id="interests" type="text" placeholder="多个兴趣用顿号或逗号分隔">
+          </div>
+          <div class="form-field full">
+            <label class="field-label" for="recentEvent">近期事件</label>
+            <textarea id="recentEvent" placeholder="最近发生了什么，正在关注什么？"></textarea>
+          </div>
+          <div class="form-field full">
+            <label class="field-label" for="topics">聊过的话题</label>
+            <textarea id="topics" placeholder="记录交流内容，避免重复问询。"></textarea>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="amount">累计消费金额（元）</label>
+            <input id="amount" type="number" min="0" step="0.01" value="0">
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="totalLiveCount">统计周期直播场次</label>
+            <input id="totalLiveCount" type="number" min="0" step="1" value="0">
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="appearedCount">出现次数</label>
+            <input id="appearedCount" type="number" min="0" step="1" value="0">
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="supportedCount">支持次数</label>
+            <input id="supportedCount" type="number" min="0" step="1" value="0">
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="latestSingleSpendAmount">最近单次消费（元）</label>
+            <input id="latestSingleSpendAmount" type="number" min="0" step="0.01" value="0">
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="highSingleSpendCount">单笔 &gt;1000 次数</label>
+            <input id="highSingleSpendCount" type="number" min="0" step="1" value="0">
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="lastInteraction">最近互动时间</label>
+            <input id="lastInteraction" type="datetime-local">
+          </div>
+          <div class="form-field full">
+            <span class="field-label">自动打标行为字段</span>
+            <div class="check-grid rule-checks">
+              <label class="check-chip">
+                <input type="checkbox" id="isWillingToReply">
+                <span>愿意接话</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" id="isNoPurpose" checked>
+                <span>无目的</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" id="hasOfflineMealRequest">
+                <span>线下/吃饭请求</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" id="isOnlyRankAndChat">
+                <span>只占榜和聊天</span>
+              </label>
+            </div>
+            <p class="hint">保存后会按规则自动计算分层和标签，手动选择的标签会作为补充保留。</p>
+          </div>
+          <div class="form-field full">
+            <label class="field-label" for="maintenance">维护方式</label>
+            <textarea id="maintenance" placeholder="如：直播中多点名回应；缺席几天后轻量问候。"></textarea>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="secondary-btn" type="button" data-close="userDialog">取消</button>
+          <button class="primary-btn" type="submit">保存档案</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detailDialog" aria-labelledby="detailDialogTitle">
+    <div class="dialog-head">
+      <div>
+        <p class="section-kicker">PROFILE DETAIL</p>
+        <h2 id="detailDialogTitle">用户详情</h2>
+      </div>
+      <button class="icon-btn" type="button" data-close="detailDialog" aria-label="关闭弹窗">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="dialog-body" id="detailBody"></div>
+  </dialog>
+
+  <dialog id="interactionDialog" aria-labelledby="interactionTitle">
+    <form id="interactionForm">
+      <div class="dialog-head">
+        <div>
+          <p class="section-kicker">NEW NOTE</p>
+          <h2 id="interactionTitle">记录一次互动</h2>
+        </div>
+        <button class="icon-btn" type="button" data-close="interactionDialog" aria-label="关闭弹窗">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <input id="interactionUserId" type="hidden">
+        <label class="field-label" for="interactionNote">互动备注</label>
+        <textarea id="interactionNote" placeholder="聊了什么？用户的状态如何？（可留空）"></textarea>
+        <div class="form-grid interaction-grid">
+          <div class="form-field">
+            <label class="field-label" for="interactionSpend">本次消费金额（元）</label>
+            <input id="interactionSpend" type="number" min="0" step="0.01" value="0">
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="interactionTotalLive">统计周期直播场次</label>
+            <input id="interactionTotalLive" type="number" min="0" step="1" value="0">
+          </div>
+          <div class="form-field full">
+            <span class="field-label">本次互动行为</span>
+            <div class="check-grid rule-checks">
+              <label class="check-chip">
+                <input type="checkbox" id="interactionSupported">
+                <span>本场支持/消费</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" id="interactionWilling">
+                <span>愿意接话</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" id="interactionOffline">
+                <span>线下/吃饭请求</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" id="interactionRankChat">
+                <span>只占榜和聊天</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <p class="hint">保存后会自动记录当前时间，并更新“最近互动”。</p>
+        <div class="dialog-actions">
+          <button class="secondary-btn" type="button" data-close="interactionDialog">取消</button>
+          <button class="primary-btn" type="submit">记下这次互动</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="./mock.js"></script>
+  <script src="./api.js"></script>
+  <script src="./app.js"></script>
+
+
+</body></html>
