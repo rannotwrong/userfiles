@@ -24,12 +24,11 @@
 
 ## 前端文件改造
 
-建议新增 3 个文件：
+实际新增 2 个文件：
 
 ```text
-supabaseClient.js
+supabase-config.js
 cloudStore.js
-auth.js
 ```
 
 保留现有文件：
@@ -42,13 +41,13 @@ api.js
 mock.js
 ```
 
-`api.js` 可以继续作为数据访问层，但内部从 `localStorage` 改为调用 `cloudStore.js`。这样 `app.js` 的 UI 逻辑不需要大改。
+`supabase-config.js` 保存 Supabase 项目 URL 和 `anon public key`，`cloudStore.js` 负责云端读写。登录状态、按钮事件和页面刷新逻辑已集成在 `app.js`。
 
 ## 环境配置
 
 GitHub Pages 是静态托管，不能安全保存服务端密钥。前端只能使用 Supabase 的 `anon public key`，数据库安全依靠 RLS 策略保证。
 
-建议在 `supabaseClient.js` 中配置：
+建议在 `supabase-config.js` 中配置：
 
 ```js
 const SUPABASE_URL = "https://你的项目编号.supabase.co";
@@ -311,7 +310,7 @@ userAtlasPendingWrites
 ## 改造顺序
 
 1. 在 Supabase 执行 `supabase/schema.sql`。
-2. 创建 `supabaseClient.js`，填入项目 URL 和 anon key。
+2. 修改 `supabase-config.js`，填入项目 URL 和 anon key。
 3. 增加登录 UI。
 4. 把 `api.js` 的读写从 `localStorage` 替换为 Supabase 查询。
 5. 接入新增、编辑、删除用户。

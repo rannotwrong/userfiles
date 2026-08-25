@@ -23,6 +23,7 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+drop trigger if exists trg_profiles_updated_at on public.profiles;
 create trigger trg_profiles_updated_at
 before update on public.profiles
 for each row execute function public.set_updated_at();
@@ -76,6 +77,7 @@ create index if not exists idx_audience_users_last_interaction_at on public.audi
 create index if not exists idx_audience_users_total_spend_amount on public.audience_users(owner_id, total_spend_amount desc);
 create index if not exists idx_audience_users_support_rate on public.audience_users(owner_id, support_rate desc);
 
+drop trigger if exists trg_audience_users_updated_at on public.audience_users;
 create trigger trg_audience_users_updated_at
 before update on public.audience_users
 for each row execute function public.set_updated_at();
@@ -107,6 +109,7 @@ create table if not exists public.live_sessions (
 create index if not exists idx_live_sessions_owner_id on public.live_sessions(owner_id);
 create index if not exists idx_live_sessions_live_date on public.live_sessions(owner_id, live_date desc);
 
+drop trigger if exists trg_live_sessions_updated_at on public.live_sessions;
 create trigger trg_live_sessions_updated_at
 before update on public.live_sessions
 for each row execute function public.set_updated_at();
@@ -161,6 +164,7 @@ create table if not exists public.tag_definitions (
 create index if not exists idx_tag_definitions_owner_id on public.tag_definitions(owner_id);
 create index if not exists idx_tag_definitions_tag_name on public.tag_definitions(tag_name);
 
+drop trigger if exists trg_tag_definitions_updated_at on public.tag_definitions;
 create trigger trg_tag_definitions_updated_at
 before update on public.tag_definitions
 for each row execute function public.set_updated_at();
@@ -218,6 +222,8 @@ select
 from public.live_sessions
 group by owner_id, live_date;
 
+alter view public.live_daily_metrics set (security_invoker = true);
+
 -- 直播趋势视图：周维度
 create or replace view public.live_weekly_metrics as
 select
@@ -228,6 +234,8 @@ select
 from public.live_sessions
 group by owner_id, date_trunc('week', live_date)::date;
 
+alter view public.live_weekly_metrics set (security_invoker = true);
+
 -- 直播趋势视图：月维度
 create or replace view public.live_monthly_metrics as
 select
@@ -237,6 +245,8 @@ select
   sum(new_potential_user_count) as new_potential_user_count
 from public.live_sessions
 group by owner_id, date_trunc('month', live_date)::date;
+
+alter view public.live_monthly_metrics set (security_invoker = true);
 
 -- 开启 RLS
 alter table public.profiles enable row level security;

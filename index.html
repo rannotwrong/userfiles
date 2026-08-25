@@ -3,7 +3,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f8fc">
-  <meta name="description" content="为个人运营者设计的本地用户增长档案台">
+  <meta name="description" content="为个人运营者设计的云端用户增长档案台">
   <title>用户增长档案台 · User Atlas</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -28,6 +28,21 @@
       </div>
       <time class="date-stamp" id="dateStamp" aria-label="今天日期"></time>
     </header>
+
+    <section class="auth-panel reveal reveal-2" id="authPanel" aria-label="账号与云端同步">
+      <div>
+        <p class="section-kicker">CLOUD SYNC</p>
+        <h2 id="authTitle">云端同步</h2>
+        <p id="authStatus">正在检查登录状态…</p>
+      </div>
+      <form class="auth-actions" id="authForm">
+        <label class="sr-only" for="authEmail">登录邮箱</label>
+        <input id="authEmail" type="email" placeholder="输入邮箱，接收登录链接" autocomplete="email">
+        <button class="primary-btn" id="sendLoginBtn" type="submit">发送登录链接</button>
+        <button class="secondary-btn" id="migrateLocalBtn" type="button" hidden>迁移本机数据</button>
+        <button class="secondary-btn" id="signOutBtn" type="button" hidden>退出登录</button>
+      </form>
+    </section>
 
     <main id="main">
       <section class="stats reveal reveal-2" aria-label="用户统计">
@@ -483,6 +498,9 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js"></script>
+  <script src="./cloudStore.js"></script>
   <script src="./mock.js"></script>
   <script src="./api.js"></script>
   <script src="./app.js"></script>

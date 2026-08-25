@@ -183,6 +183,51 @@ h1 {
   font-size: 12px;
 }
 
+.auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, .84);
+  box-shadow: var(--shadow-sm);
+}
+.auth-panel h2 {
+  margin: 0 0 var(--space-1);
+  font-size: 18px;
+  letter-spacing: -.02em;
+}
+.auth-panel p {
+  margin: 0;
+  color: var(--muted);
+}
+.auth-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.auth-actions input {
+  width: min(280px, 62vw);
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.auth-panel.is-connected {
+  border-color: rgba(22, 163, 123, .2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(231, 250, 253, .62));
+}
+.auth-panel.is-warning {
+  border-color: rgba(200, 148, 24, .28);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(255, 247, 220, .64));
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1015,6 +1060,15 @@ dialog::backdrop {
 @media (max-width: 480px) {
   .app-shell { width: min(100% - 24px, 1180px); }
   .topbar { padding-top: 24px; }
+  .auth-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .auth-actions,
+  .auth-actions input,
+  .auth-actions button {
+    width: 100%;
+  }
   .brand-mark {
     width: 42px;
     height: 42px;

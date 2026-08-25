@@ -1,5 +1,6 @@
 (function () {
   const STORAGE_KEY = "user_profile_notebook_v2";
+  const cloudStore = window.UserAtlasCloudStore;
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const uid = () => globalThis.crypto?.randomUUID?.() || `u_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -9,16 +10,20 @@
   const toBoolean = (value, fallback = false) => typeof value === "boolean" ? value : fallback;
 
   const state = {
-    users: loadUsers(),
+    users: [],
+    trends: null,
     activeView: "profiles",
     activeTier: "全部",
     search: "",
     selectedImage: null,
     previewUrl: "",
-    detailUserId: null
+    detailUserId: null,
+    cloudEnabled: Boolean(cloudStore?.isConfigured),
+    currentUser: null,
+    isLoading: true
   };
 
-  function loadUsers() {
+  function loadLocalUsers() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (Array.isArray(saved)) return saved.map(normalizeUser);
@@ -137,7 +142,15 @@
     };
   }
 
-  function saveUsers() {
+  async function persistUser(user, oldTier = null) {
+    if (state.cloudEnabled && state.currentUser) {
+      return await cloudStore.saveUser(user, oldTier);
+    }
+    saveLocalUsers();
+    return user;
+  }
+
+  function saveLocalUsers() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.users));
     } catch (error) {
@@ -187,6 +200,130 @@
     toast.classList.add("show");
     clearTimeout(showToast.timer);
     showToast.timer = setTimeout(() => toast.classList.remove("show"), 2400);
+  }
+
+  function renderAuthPanel() {
+    const panel = $("#authPanel");
+    const emailInput = $("#authEmail");
+    const sendButton = $("#sendLoginBtn");
+    const signOutButton = $("#signOutBtn");
+    const migrateButton = $("#migrateLocalBtn");
+    const status = $("#authStatus");
+
+    panel.classList.toggle("is-connected", Boolean(state.currentUser));
+    panel.classList.toggle("is-warning", !state.cloudEnabled);
+
+    if (!state.cloudEnabled) {
+      status.textContent = "Supabase 尚未配置，当前为本机演示模式。填写配置后即可启用多设备同步。";
+      emailInput.hidden = true;
+      sendButton.hidden = true;
+      signOutButton.hidden = true;
+      migrateButton.hidden = true;
+      return;
+    }
+
+    if (state.currentUser) {
+      status.textContent = `已连接云端账号：${state.currentUser.email || "当前账号"}`;
+      emailInput.hidden = true;
+      sendButton.hidden = true;
+      signOutButton.hidden = false;
+      migrateButton.hidden = !cloudStore.getLegacyUsers().length;
+      return;
+    }
+
+    status.textContent = "登录后，用户档案会保存到 Supabase 云端，可在多设备同步。";
+    emailInput.hidden = false;
+    sendButton.hidden = false;
+    signOutButton.hidden = true;
+    migrateButton.hidden = true;
+  }
+
+  async function loadCloudData() {
+    if (!state.cloudEnabled) {
+      state.users = loadLocalUsers();
+      state.trends = window.NotebookMock.liveTrends;
+      state.isLoading = false;
+      renderAuthPanel();
+      renderUsers();
+      renderTrends();
+      return;
+    }
+
+    try {
+      const session = await cloudStore.getSession();
+      if (!session) {
+        state.currentUser = null;
+        state.users = [];
+        state.trends = window.NotebookMock.liveTrends;
+        state.isLoading = false;
+        renderAuthPanel();
+        renderUsers();
+        renderTrends();
+        return;
+      }
+
+      state.currentUser = await cloudStore.initCurrentUser();
+      state.users = (await cloudStore.listUsers()).map(normalizeUser);
+      await loadCloudTrends();
+      state.isLoading = false;
+      renderAuthPanel();
+      renderUsers();
+      renderTrends();
+    } catch (error) {
+      console.warn("云端数据加载失败。", error);
+      state.users = loadLocalUsers();
+      state.trends = window.NotebookMock.liveTrends;
+      state.isLoading = false;
+      renderAuthPanel();
+      renderUsers();
+      renderTrends();
+      showToast(error.message || "云端数据加载失败，已切换为本机演示数据");
+    }
+  }
+
+  async function loadCloudTrends() {
+    if (!state.cloudEnabled || !state.currentUser) {
+      state.trends = window.NotebookMock.liveTrends;
+      return;
+    }
+    try {
+      const trends = await cloudStore.listTrends();
+      const dailyLatest = trends.daily[0];
+      const weekly = trends.weekly.map((item) => ({
+        label: item.week_start_date?.slice(5) || "本周",
+        revenue: Number(item.weekly_revenue || 0),
+        potentialUsers: Number(item.new_potential_user_count || 0)
+      }));
+      const monthly = trends.monthly.map((item) => ({
+        label: item.month_start_date?.slice(0, 7) || "本月",
+        revenue: Number(item.monthly_revenue || 0),
+        potentialUsers: Number(item.new_potential_user_count || 0)
+      }));
+
+      state.trends = {
+        daily: dailyLatest ? {
+          date: dailyLatest.live_date || "最近一天",
+          revenue: Number(dailyLatest.daily_revenue || 0),
+          paidUsers: Number(dailyLatest.paid_user_count || 0),
+          firstPaidUsers: Number(dailyLatest.first_paid_user_count || 0),
+          sRevenueRate: Number(dailyLatest.s_user_revenue_rate || 0),
+          potentialUsers: Number(dailyLatest.new_potential_user_count || 0)
+        } : window.NotebookMock.liveTrends.daily,
+        weekly: weekly.length ? {
+          revenue: weekly.reduce((sum, item) => sum + item.revenue, 0),
+          potentialUsers: weekly.reduce((sum, item) => sum + item.potentialUsers, 0),
+          trend: weekly
+        } : window.NotebookMock.liveTrends.weekly,
+        monthly: monthly.length ? {
+          revenue: monthly.reduce((sum, item) => sum + item.revenue, 0),
+          potentialUsers: monthly.reduce((sum, item) => sum + item.potentialUsers, 0),
+          trend: monthly
+        } : window.NotebookMock.liveTrends.monthly
+      };
+    } catch (error) {
+      console.warn("直播趋势加载失败。", error);
+      state.trends = window.NotebookMock.liveTrends;
+    }
   }
 
   function updateStats() {
@@ -311,7 +448,7 @@
   }
 
   function renderTrends() {
-    const trends = window.NotebookMock.liveTrends;
+    const trends = state.trends || window.NotebookMock.liveTrends;
     $("#dailyPeriod").textContent = trends.daily.date;
     $("#dailyMetrics").innerHTML = [
       metricCard("日收入", formatCurrency(trends.daily.revenue), "今日直播成交"),
@@ -364,6 +501,11 @@
   }
 
   function openUserForm(user = null) {
+    if (state.cloudEnabled && !state.currentUser) {
+      showToast("请先登录云端账号");
+      $("#authEmail").focus();
+      return;
+    }
     $("#userForm").reset();
     $("#nicknameError").textContent = "";
     $("#tagsError").textContent = "";
@@ -474,13 +616,21 @@
     requestAnimationFrame(() => $("#interactionNote").focus());
   }
 
-  function deleteUser(user) {
+  async function deleteUser(user) {
     if (!window.confirm(`确定删除“${user.nickname}”的档案吗？此操作不可撤销。`)) return;
-    state.users = state.users.filter((item) => item.id !== user.id);
-    saveUsers();
-    $("#detailDialog").close();
-    renderUsers();
-    showToast("档案已删除");
+    try {
+      if (state.cloudEnabled && state.currentUser) {
+        await cloudStore.deleteUser(user.id);
+      }
+      state.users = state.users.filter((item) => item.id !== user.id);
+      if (!state.cloudEnabled) saveLocalUsers();
+      $("#detailDialog").close();
+      renderUsers();
+      showToast("档案已删除");
+    } catch (error) {
+      console.warn("删除档案失败。", error);
+      showToast(error.message || "删除失败，请稍后重试");
+    }
   }
 
   function resetImport() {
@@ -543,6 +693,11 @@
   }
 
   async function parseAndSave() {
+    if (state.cloudEnabled && !state.currentUser) {
+      showToast("请先登录云端账号");
+      $("#authEmail").focus();
+      return;
+    }
     const text = $("#liveText").value.trim();
     if (!text) {
       showToast("请先填写文字或识别图片");
@@ -559,7 +714,7 @@
       if (result.code !== 0) throw new Error(result.message);
       const now = new Date().toISOString();
       const draft = normalizeUser({
-        id: uid(),
+        id: state.cloudEnabled && state.currentUser ? "" : uid(),
         ...result.data,
         createdAt: now,
         lastInteraction: now,
@@ -574,8 +729,9 @@
           isOnlyRankAndChat: Boolean(result.data.isOnlyRankAndChat)
         }]
       });
-      state.users.unshift(draft);
-      saveUsers();
+      const saved = await persistUser(draft, draft.tier);
+      state.users.unshift(normalizeUser(saved));
+      if (!state.cloudEnabled) saveLocalUsers();
       resetImport();
       state.activeTier = "全部";
       $$(".filter-btn").forEach((item) => {
@@ -593,7 +749,68 @@
     }
   }
 
+  async function handleLogin(event) {
+    event.preventDefault();
+    const email = $("#authEmail").value.trim();
+    if (!email) {
+      showToast("请先填写邮箱");
+      $("#authEmail").focus();
+      return;
+    }
+    const button = $("#sendLoginBtn");
+    button.disabled = true;
+    button.textContent = "发送中…";
+    try {
+      await cloudStore.signInWithEmail(email);
+      showToast("登录链接已发送，请打开邮箱确认");
+      $("#authStatus").textContent = "登录链接已发送，请在邮箱中点击确认后回到本页面。";
+    } catch (error) {
+      console.warn("发送登录链接失败。", error);
+      showToast(error.message || "登录链接发送失败");
+    } finally {
+      button.disabled = false;
+      button.textContent = "发送登录链接";
+    }
+  }
+
+  async function handleSignOut() {
+    try {
+      await cloudStore.signOut();
+      state.currentUser = null;
+      state.users = [];
+      renderAuthPanel();
+      renderUsers();
+      showToast("已退出登录");
+    } catch (error) {
+      console.warn("退出登录失败。", error);
+      showToast(error.message || "退出失败，请稍后重试");
+    }
+  }
+
+  async function handleMigrateLocalData() {
+    if (!window.confirm("确定将本机旧数据迁移到当前云端账号吗？迁移后不会删除本机备份。")) return;
+    const button = $("#migrateLocalBtn");
+    button.disabled = true;
+    button.textContent = "迁移中…";
+    try {
+      const count = await cloudStore.migrateLegacyUsers(normalizeUser);
+      state.users = (await cloudStore.listUsers()).map(normalizeUser);
+      renderAuthPanel();
+      renderUsers();
+      showToast(`已迁移 ${count} 位本机用户`);
+    } catch (error) {
+      console.warn("迁移本机数据失败。", error);
+      showToast(error.message || "迁移失败，请稍后重试");
+    } finally {
+      button.disabled = false;
+      button.textContent = "迁移本机数据";
+    }
+  }
+
   function bindEvents() {
+    $("#authForm").addEventListener("submit", handleLogin);
+    $("#signOutBtn").addEventListener("click", handleSignOut);
+    $("#migrateLocalBtn").addEventListener("click", handleMigrateLocalData);
     $("#addUserBtn").addEventListener("click", () => openUserForm());
     $("#search").addEventListener("input", (event) => {
       state.search = event.target.value;
@@ -612,7 +829,7 @@
       button.addEventListener("click", () => switchView(button.dataset.viewTarget));
     });
 
-    $("#userForm").addEventListener("submit", (event) => {
+    $("#userForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const nickname = $("#nickname").value.trim();
       if (!nickname) {
@@ -623,8 +840,12 @@
       const id = $("#userId").value;
       const existing = state.users.find((user) => user.id === id);
       const manualTags = $$('input[name="tags"]:checked').map((input) => input.value);
+      const submitButton = $("#userForm .primary-btn[type='submit']");
+      submitButton.disabled = true;
+      submitButton.textContent = "保存中…";
+
       const user = normalizeUser({
-        id: id || uid(),
+        id: id || (state.cloudEnabled && state.currentUser ? "" : uid()),
         nickname,
         level: $("#level").value.trim(),
         manualTags,
@@ -647,22 +868,44 @@
         lastInteraction: $("#lastInteraction").value ? new Date($("#lastInteraction").value).toISOString() : "",
         interactions: existing?.interactions || []
       });
-      state.users = existing
-        ? state.users.map((item) => item.id === id ? user : item)
-        : [user, ...state.users];
-      saveUsers();
-      $("#userDialog").close();
-      renderUsers();
-      showToast(`${existing ? "档案已更新" : "新用户已收进记录本"}，自动判为 ${user.tier} 级`);
+      try {
+        const saved = await persistUser(user, existing?.tier || user.tier);
+        const normalized = normalizeUser(saved);
+        state.users = existing
+          ? state.users.map((item) => item.id === id ? normalized : item)
+          : [normalized, ...state.users];
+        if (!state.cloudEnabled) saveLocalUsers();
+        $("#userDialog").close();
+        renderUsers();
+        showToast(`${existing ? "档案已更新" : "新用户已收进记录本"}，自动判为 ${normalized.tier} 级`);
+      } catch (error) {
+        console.warn("保存档案失败。", error);
+        showToast(error.message || "保存失败，请稍后重试");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "保存档案";
+      }
     });
 
-    $("#interactionForm").addEventListener("submit", (event) => {
+    $("#interactionForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const user = state.users.find((item) => item.id === $("#interactionUserId").value);
       if (!user) return;
       const now = new Date().toISOString();
       const spendAmount = Number($("#interactionSpend").value || 0);
       const supported = $("#interactionSupported").checked || spendAmount > 0;
+      const interaction = {
+        time: now,
+        note: $("#interactionNote").value.trim() || "完成一次互动",
+        appeared: true,
+        supported,
+        spendAmount,
+        isWillingToReply: $("#interactionWilling").checked,
+        hasOfflineMealRequest: $("#interactionOffline").checked,
+        isOnlyRankAndChat: $("#interactionRankChat").checked,
+        topics: $("#interactionNote").value.trim(),
+        remark: $("#interactionNote").value.trim()
+      };
       const updated = normalizeUser({
         ...user,
         lastInteraction: now,
@@ -678,26 +921,33 @@
         hasOfflineMealRequest: Boolean(user.hasOfflineMealRequest || $("#interactionOffline").checked),
         isOnlyRankAndChat: Boolean($("#interactionRankChat").checked && !supported),
         interactions: [
-        {
-          time: now,
-          note: $("#interactionNote").value.trim() || "完成一次互动",
-          appeared: true,
-          supported,
-          spendAmount,
-          isWillingToReply: $("#interactionWilling").checked,
-          hasOfflineMealRequest: $("#interactionOffline").checked,
-          isOnlyRankAndChat: $("#interactionRankChat").checked,
-          topics: $("#interactionNote").value.trim(),
-          remark: $("#interactionNote").value.trim()
-        },
-        ...(user.interactions || [])
+          interaction,
+          ...(user.interactions || [])
         ]
       });
-      state.users = state.users.map((item) => item.id === user.id ? updated : item);
-      saveUsers();
-      $("#interactionDialog").close();
-      renderUsers();
-      showToast(`互动已记录，自动更新为 ${updated.tier} 级`);
+      const submitButton = $("#interactionForm .primary-btn[type='submit']");
+      submitButton.disabled = true;
+      submitButton.textContent = "保存中…";
+      try {
+        let savedUser = updated;
+        if (state.cloudEnabled && state.currentUser) {
+          const result = await cloudStore.addInteraction(user, interaction, updated);
+          savedUser = normalizeUser(result.user);
+        } else {
+          saveLocalUsers();
+        }
+        state.users = state.users.map((item) => item.id === user.id ? savedUser : item);
+        if (!state.cloudEnabled) saveLocalUsers();
+        $("#interactionDialog").close();
+        renderUsers();
+        showToast(`互动已记录，自动更新为 ${savedUser.tier} 级`);
+      } catch (error) {
+        console.warn("互动记录保存失败。", error);
+        showToast(error.message || "互动保存失败，请稍后重试");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "记下这次互动";
+      }
     });
 
     $$("[data-close]").forEach((button) => {
@@ -728,8 +978,7 @@
     $("#parseBtn").addEventListener("click", parseAndSave);
   }
 
-  function init() {
-    saveUsers();
+  async function init() {
     $("#dateStamp").textContent = new Intl.DateTimeFormat("zh-CN", {
       month: "2-digit",
       day: "2-digit",
@@ -737,9 +986,16 @@
     }).format(new Date());
     buildTagOptions();
     bindEvents();
-    renderUsers();
-    renderTrends();
+    renderAuthPanel();
     switchView(state.activeView);
+    await loadCloudData();
+
+    if (state.cloudEnabled && cloudStore.client) {
+      cloudStore.client.auth.onAuthStateChange(async (_event, session) => {
+        state.currentUser = session?.user || null;
+        await loadCloudData();
+      });
+    }
   }
 
   init();
