@@ -26,20 +26,15 @@ http://localhost:8765/index.html
 
 ## GitHub Pages 部署
 
-本项目已包含 GitHub Pages Actions 工作流：
-
-```text
-.github/workflows/pages.yml
-```
-
 部署步骤：
 
 1. 在 GitHub 新建一个空仓库。
 2. 将本目录代码推送到仓库的 `main` 分支。
 3. 打开 GitHub 仓库的 `Settings -> Pages`。
-4. 在 `Build and deployment` 中选择 `GitHub Actions`。
-5. 等待 `Deploy to GitHub Pages` 工作流完成。
-6. GitHub 会生成公开访问链接。
+4. 在 `Build and deployment` 中选择 `Deploy from a branch`。
+5. Branch 选择 `main`，目录选择 `/ (root)`。
+6. 保存后等待 GitHub Pages 发布完成。
+7. GitHub 会生成公开访问链接。
 
 ## 入口文件
 
