@@ -8,7 +8,14 @@
   );
 
   const client = isConfigured && window.supabase
-    ? window.supabase.createClient(config.url, config.anonKey)
+    ? window.supabase.createClient(config.url, config.anonKey, {
+      auth: {
+        storage: window.localStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    })
     : null;
 
   function toNumber(value) {
@@ -136,15 +143,23 @@
 
   async function requireSession() {
     if (!client) throw new Error("Supabase 尚未配置，请先填写 supabase-config.js。");
-    const { data, error } = await client.auth.getSession();
+    const { data, error } = await getActiveSession();
     if (error) throw error;
     if (!data.session) throw new Error("请先登录后再操作云端数据。");
     return data.session;
   }
 
+  async function getActiveSession() {
+    const result = await client.auth.getSession();
+    if (result.error || result.data?.session) return result;
+    const refreshed = await client.auth.refreshSession();
+    if (refreshed.error) return result;
+    return refreshed;
+  }
+
   async function getSession() {
     if (!client) return null;
-    const { data, error } = await client.auth.getSession();
+    const { data, error } = await getActiveSession();
     if (error) throw error;
     return data.session;
   }
