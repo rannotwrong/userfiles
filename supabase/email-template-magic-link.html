@@ -1,0 +1,19 @@
+<h2>用户增长档案台登录验证码</h2>
+
+<p>请复制下面的验证码，回到用户增长档案台页面完成登录：</p>
+
+<p style="font-size: 28px; font-weight: 700; letter-spacing: 6px; margin: 20px 0;">
+  {{ .Token }}
+</p>
+
+<p>验证码有效期较短，且只能使用一次。</p>
+
+<p>如果你更习惯点击链接，也可以使用下面的登录链接：</p>
+
+<p>
+  <a href="{{ .ConfirmationURL }}">打开用户增长档案台并登录</a>
+</p>
+
+<p style="color: #667085; font-size: 13px;">
+  如果链接打开后显示 localhost 拒绝连接，请不要使用链接，直接复制上方验证码登录。
+</p>

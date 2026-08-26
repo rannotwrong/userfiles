@@ -87,6 +87,16 @@ await supabase.auth.verifyOtp({
 });
 ```
 
+如果收到的邮件只有 `Sign in` 链接、没有验证码，需要在 Supabase 后台同步配置：
+
+1. 进入 `Authentication -> URL Configuration`。
+2. 将 `Site URL` 设置为 `https://rannotwrong.github.io/userfiles/`。
+3. 在 `Redirect URLs` 中加入 `https://rannotwrong.github.io/userfiles/`。
+4. 进入 `Authentication -> Email Templates -> Magic Link`。
+5. 将邮件模板替换为 `supabase/email-template-magic-link.html` 中的内容，确保邮件展示 `{{ .Token }}`。
+
+改完后需要重新发送一封新邮件；旧邮件中的登录链接不会自动更新。
+
 也已接入 Google OAuth 登录按钮：
 
 ```js

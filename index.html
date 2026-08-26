@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户增长档案台">
   <title>用户增长档案台 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260826-no-migrate">
+  <link rel="stylesheet" href="./styles.css?v=20260826-email-template">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -34,7 +34,7 @@
         <p class="section-kicker">CLOUD SYNC</p>
         <h2 id="authTitle">云端同步</h2>
         <p id="authStatus">登录后，用户档案会保存到 Supabase 云端，可在多设备同步。</p>
-        <p class="auth-hint">若邮件链接仍跳到 localhost，请不要点链接，直接复制邮件里的验证码登录。</p>
+        <p class="auth-hint">优先复制邮件验证码登录；如果邮件只有 Sign in 链接，请在 Supabase 邮件模板里加入验证码。</p>
       </div>
       <form class="auth-actions" id="authForm">
         <label class="sr-only" for="authEmail">登录邮箱</label>
@@ -564,11 +564,11 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./supabase-config.js?v=20260826-no-migrate"></script>
-  <script src="./cloudStore.js?v=20260826-no-migrate"></script>
-  <script src="./mock.js?v=20260826-no-migrate"></script>
-  <script src="./api.js?v=20260826-no-migrate"></script>
-  <script src="./app.js?v=20260826-no-migrate"></script>
+  <script src="./supabase-config.js?v=20260826-email-template"></script>
+  <script src="./cloudStore.js?v=20260826-email-template"></script>
+  <script src="./mock.js?v=20260826-email-template"></script>
+  <script src="./api.js?v=20260826-email-template"></script>
+  <script src="./app.js?v=20260826-email-template"></script>
 
 
 
