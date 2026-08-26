@@ -227,7 +227,7 @@
     }
 
     if (state.currentUser) {
-      status.textContent = `已连接云端账号：${state.currentUser.email || "当前账号"}`;
+      status.textContent = "";
       emailInput.hidden = true;
       otpInput.hidden = true;
       sendButton.hidden = true;
@@ -771,7 +771,6 @@
     try {
       await cloudStore.signInWithEmail(email);
       showToast("验证码邮件已发送");
-      $("#authStatus").textContent = "请查看邮箱：可以点击邮件链接，也可以把邮件中的验证码填到这里登录。";
     } catch (error) {
       console.warn("发送登录链接失败。", error);
       showToast(error.message || "登录链接发送失败");
