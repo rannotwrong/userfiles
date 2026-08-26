@@ -8,7 +8,7 @@
 - 使用 Supabase PostgreSQL 保存用户档案和直播数据。
 - 保留现有 GitHub Pages 静态部署方式。
 - 保留当前前端自动打标逻辑，先在浏览器端计算，再写入数据库。
-- 保留 `localStorage` 作为离线缓存和迁移来源。
+- 登录后只使用 Supabase 云端数据，不提供本机数据迁移入口。
 
 ## 数据表对应关系
 
@@ -302,18 +302,6 @@ const { data: monthly } = await supabase
 
 这些视图已经按 `owner_id` 汇总。读取时仍建议检查当前登录状态，避免未登录时展示空数据造成误解。
 
-## 本地数据迁移
-
-第一次登录后，如果检测到旧版 `localStorage` 中存在数据，展示“迁移本机数据到云端”的按钮。
-
-迁移步骤：
-
-1. 读取 `localStorage` 中的用户档案和直播趋势数据。
-2. 转换字段名，例如 `levelName` 转为 `level_name`。
-3. 批量写入 `audience_users` 和 `live_sessions`。
-4. 迁移成功后，将本地数据备份为 `localStorage:userAtlasMigratedBackup`。
-5. 不立即删除原始本地数据，避免误操作后无法恢复。
-
 ## 失败处理
 
 网络失败时不要覆盖本地页面数据。建议展示提示：
@@ -339,8 +327,7 @@ userAtlasPendingWrites
 5. 接入新增、编辑、删除用户。
 6. 接入“记录一次互动”。
 7. 接入直播记录和趋势页。
-8. 增加本地数据迁移入口。
-9. 发布到 GitHub Pages。
+8. 发布到 GitHub Pages。
 
 ## MVP 范围
 

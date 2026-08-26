@@ -1,7 +1,4 @@
 (function () {
-  const LEGACY_STORAGE_KEY = "user_profile_notebook_v2";
-  const MIGRATION_BACKUP_KEY = "user_profile_notebook_v2_migrated_backup";
-
   const config = window.UserAtlasSupabaseConfig || {};
   const isConfigured = Boolean(
     config.url &&
@@ -124,15 +121,6 @@
       remark: row.remark || "",
       rawText: row.raw_text || ""
     };
-  }
-
-  function getLegacyUsers() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY));
-      return Array.isArray(saved) ? saved : [];
-    } catch {
-      return [];
-    }
   }
 
   async function requireSession() {
@@ -323,30 +311,9 @@
     };
   }
 
-  async function migrateLegacyUsers(normalizeUser) {
-    const session = await requireSession();
-    const legacyUsers = getLegacyUsers().map(normalizeUser);
-    if (!legacyUsers.length) return 0;
-
-    const created = [];
-    for (const user of legacyUsers) {
-      const saved = await saveUser({ ...user, id: "" }, user.tier);
-      created.push(saved);
-      const interactions = toArray(user.interactions);
-      for (const interaction of interactions) {
-        await client
-          .from("user_live_interactions")
-          .insert(toDbInteraction(interaction, saved.id, session.user.id));
-      }
-    }
-    localStorage.setItem(MIGRATION_BACKUP_KEY, JSON.stringify(legacyUsers));
-    return created.length;
-  }
-
   window.UserAtlasCloudStore = {
     isConfigured,
     client,
-    getLegacyUsers,
     getSession,
     signInWithEmail,
     verifyEmailOtp,
@@ -357,7 +324,6 @@
     saveUser,
     deleteUser,
     addInteraction,
-    listTrends,
-    migrateLegacyUsers
+    listTrends
   };
 })();

@@ -210,7 +210,6 @@
     const verifyButton = $("#verifyOtpBtn");
     const googleButton = $("#googleLoginBtn");
     const signOutButton = $("#signOutBtn");
-    const migrateButton = $("#migrateLocalBtn");
     const status = $("#authStatus");
 
     panel.classList.toggle("is-connected", Boolean(state.currentUser));
@@ -224,7 +223,6 @@
       verifyButton.hidden = true;
       googleButton.hidden = true;
       signOutButton.hidden = true;
-      migrateButton.hidden = true;
       return;
     }
 
@@ -236,7 +234,6 @@
       verifyButton.hidden = true;
       googleButton.hidden = true;
       signOutButton.hidden = false;
-      migrateButton.hidden = !cloudStore.getLegacyUsers().length;
       return;
     }
 
@@ -247,7 +244,6 @@
     verifyButton.hidden = false;
     googleButton.hidden = false;
     signOutButton.hidden = true;
-    migrateButton.hidden = true;
   }
 
   async function loadCloudData() {
@@ -849,32 +845,11 @@
     }
   }
 
-  async function handleMigrateLocalData() {
-    if (!window.confirm("确定将本机旧数据迁移到当前云端账号吗？迁移后不会删除本机备份。")) return;
-    const button = $("#migrateLocalBtn");
-    button.disabled = true;
-    button.textContent = "迁移中…";
-    try {
-      const count = await cloudStore.migrateLegacyUsers(normalizeUser);
-      state.users = (await cloudStore.listUsers()).map(normalizeUser);
-      renderAuthPanel();
-      renderUsers();
-      showToast(`已迁移 ${count} 位本机用户`);
-    } catch (error) {
-      console.warn("迁移本机数据失败。", error);
-      showToast(error.message || "迁移失败，请稍后重试");
-    } finally {
-      button.disabled = false;
-      button.textContent = "迁移本机数据";
-    }
-  }
-
   function bindEvents() {
     $("#authForm").addEventListener("submit", handleLogin);
     $("#verifyOtpBtn").addEventListener("click", handleVerifyOtp);
     $("#googleLoginBtn").addEventListener("click", handleGoogleLogin);
     $("#signOutBtn").addEventListener("click", handleSignOut);
-    $("#migrateLocalBtn").addEventListener("click", handleMigrateLocalData);
     $("#addUserBtn").addEventListener("click", () => openUserForm());
     $("#search").addEventListener("input", (event) => {
       state.search = event.target.value;
