@@ -219,6 +219,30 @@ h1 {
   border-radius: 999px;
   background: var(--surface);
 }
+.google-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.google-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: none;
+}
+.google-btn path:nth-child(1) { fill: #4285f4; }
+.google-btn path:nth-child(2) { fill: #34a853; }
+.google-btn path:nth-child(3) { fill: #fbbc05; }
+.google-btn path:nth-child(4) { fill: #ea4335; }
 .auth-panel.is-connected {
   border-color: rgba(22, 163, 123, .2);
   background: linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(231, 250, 253, .62));

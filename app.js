@@ -206,6 +206,7 @@
     const panel = $("#authPanel");
     const emailInput = $("#authEmail");
     const sendButton = $("#sendLoginBtn");
+    const googleButton = $("#googleLoginBtn");
     const signOutButton = $("#signOutBtn");
     const migrateButton = $("#migrateLocalBtn");
     const status = $("#authStatus");
@@ -217,6 +218,7 @@
       status.textContent = "Supabase 尚未配置，当前为本机演示模式。填写配置后即可启用多设备同步。";
       emailInput.hidden = true;
       sendButton.hidden = true;
+      googleButton.hidden = true;
       signOutButton.hidden = true;
       migrateButton.hidden = true;
       return;
@@ -226,6 +228,7 @@
       status.textContent = `已连接云端账号：${state.currentUser.email || "当前账号"}`;
       emailInput.hidden = true;
       sendButton.hidden = true;
+      googleButton.hidden = true;
       signOutButton.hidden = false;
       migrateButton.hidden = !cloudStore.getLegacyUsers().length;
       return;
@@ -234,6 +237,7 @@
     status.textContent = "登录后，用户档案会保存到 Supabase 云端，可在多设备同步。";
     emailInput.hidden = false;
     sendButton.hidden = false;
+    googleButton.hidden = false;
     signOutButton.hidden = true;
     migrateButton.hidden = true;
   }
@@ -773,6 +777,27 @@
     }
   }
 
+  async function handleGoogleLogin() {
+    const button = $("#googleLoginBtn");
+    button.disabled = true;
+    button.textContent = "跳转中…";
+    try {
+      await cloudStore.signInWithGoogle();
+    } catch (error) {
+      console.warn("Google 登录失败。", error);
+      showToast(error.message || "Google 登录失败，请检查 Supabase 配置");
+      button.disabled = false;
+      button.innerHTML = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21.6 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.33 2.98-7.51Z"></path>
+          <path d="M12 22c2.7 0 4.96-.9 6.62-2.43l-3.24-2.5c-.9.6-2.04.96-3.38.96-2.6 0-4.8-1.76-5.59-4.12H3.06v2.58A10 10 0 0 0 12 22Z"></path>
+          <path d="M6.41 13.91A6 6 0 0 1 6.1 12c0-.66.11-1.31.31-1.91V7.51H3.06A10 10 0 0 0 2 12c0 1.61.39 3.14 1.06 4.49l3.35-2.58Z"></path>
+          <path d="M12 5.97c1.47 0 2.78.5 3.82 1.5l2.87-2.87C16.95 2.98 14.7 2 12 2a10 10 0 0 0-8.94 5.51l3.35 2.58C7.2 7.73 9.4 5.97 12 5.97Z"></path>
+        </svg>
+        使用 Google 登录`;
+    }
+  }
+
   async function handleSignOut() {
     try {
       await cloudStore.signOut();
@@ -809,6 +834,7 @@
 
   function bindEvents() {
     $("#authForm").addEventListener("submit", handleLogin);
+    $("#googleLoginBtn").addEventListener("click", handleGoogleLogin);
     $("#signOutBtn").addEventListener("click", handleSignOut);
     $("#migrateLocalBtn").addEventListener("click", handleMigrateLocalData);
     $("#addUserBtn").addEventListener("click", () => openUserForm());

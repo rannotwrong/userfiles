@@ -66,7 +66,7 @@ const { data } = await supabase.auth.getSession();
 
 如果未登录，展示登录区域；如果已登录，进入档案台并加载云端数据。
 
-推荐第一版使用邮箱验证码登录：
+当前已支持邮箱验证码登录：
 
 ```js
 await supabase.auth.signInWithOtp({
@@ -76,6 +76,19 @@ await supabase.auth.signInWithOtp({
   }
 });
 ```
+
+也已接入 Google OAuth 登录按钮：
+
+```js
+await supabase.auth.signInWithOAuth({
+  provider: "google",
+  options: {
+    redirectTo: window.location.origin + window.location.pathname
+  }
+});
+```
+
+Google 登录需要先在 Supabase Dashboard 的 `Authentication -> Providers -> Google` 中启用，并在 Google Cloud 配置 OAuth Client 和 Supabase 提供的回调地址。未开启 Provider 时，前端按钮会跳转失败或返回 Supabase 的 Provider 配置错误。
 
 登录成功后调用：
 

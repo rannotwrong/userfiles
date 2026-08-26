@@ -161,6 +161,17 @@
     if (error) throw error;
   }
 
+  async function signInWithGoogle() {
+    if (!client) throw new Error("Supabase 尚未配置，请先填写 supabase-config.js。");
+    const { error } = await client.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + window.location.pathname
+      }
+    });
+    if (error) throw error;
+  }
+
   async function signOut() {
     if (!client) return;
     const { error } = await client.auth.signOut();
@@ -323,6 +334,7 @@
     getLegacyUsers,
     getSession,
     signInWithEmail,
+    signInWithGoogle,
     signOut,
     initCurrentUser,
     listUsers,
