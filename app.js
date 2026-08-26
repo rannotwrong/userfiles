@@ -205,7 +205,9 @@
   function renderAuthPanel() {
     const panel = $("#authPanel");
     const emailInput = $("#authEmail");
+    const otpInput = $("#authOtp");
     const sendButton = $("#sendLoginBtn");
+    const verifyButton = $("#verifyOtpBtn");
     const googleButton = $("#googleLoginBtn");
     const signOutButton = $("#signOutBtn");
     const migrateButton = $("#migrateLocalBtn");
@@ -217,7 +219,9 @@
     if (!state.cloudEnabled) {
       status.textContent = "Supabase 尚未配置，当前为本机演示模式。填写配置后即可启用多设备同步。";
       emailInput.hidden = true;
+      otpInput.hidden = true;
       sendButton.hidden = true;
+      verifyButton.hidden = true;
       googleButton.hidden = true;
       signOutButton.hidden = true;
       migrateButton.hidden = true;
@@ -227,7 +231,9 @@
     if (state.currentUser) {
       status.textContent = `已连接云端账号：${state.currentUser.email || "当前账号"}`;
       emailInput.hidden = true;
+      otpInput.hidden = true;
       sendButton.hidden = true;
+      verifyButton.hidden = true;
       googleButton.hidden = true;
       signOutButton.hidden = false;
       migrateButton.hidden = !cloudStore.getLegacyUsers().length;
@@ -237,6 +243,8 @@
     status.textContent = "登录后，用户档案会保存到 Supabase 云端，可在多设备同步。";
     emailInput.hidden = false;
     sendButton.hidden = false;
+    otpInput.hidden = false;
+    verifyButton.hidden = false;
     googleButton.hidden = false;
     signOutButton.hidden = true;
     migrateButton.hidden = true;
@@ -766,14 +774,43 @@
     button.textContent = "发送中…";
     try {
       await cloudStore.signInWithEmail(email);
-      showToast("登录链接已发送，请打开邮箱确认");
-      $("#authStatus").textContent = "登录链接已发送，请在邮箱中点击确认后回到本页面。";
+      showToast("验证码邮件已发送");
+      $("#authStatus").textContent = "请查看邮箱：可以点击邮件链接，也可以把邮件中的验证码填到这里登录。";
     } catch (error) {
       console.warn("发送登录链接失败。", error);
       showToast(error.message || "登录链接发送失败");
     } finally {
       button.disabled = false;
-      button.textContent = "发送登录链接";
+      button.textContent = "发送验证码";
+    }
+  }
+
+  async function handleVerifyOtp() {
+    const email = $("#authEmail").value.trim();
+    const token = $("#authOtp").value.trim().replace(/\s/g, "");
+    if (!email) {
+      showToast("请先填写邮箱");
+      $("#authEmail").focus();
+      return;
+    }
+    if (!token) {
+      showToast("请填写邮箱验证码");
+      $("#authOtp").focus();
+      return;
+    }
+    const button = $("#verifyOtpBtn");
+    button.disabled = true;
+    button.textContent = "验证中…";
+    try {
+      await cloudStore.verifyEmailOtp(email, token);
+      await loadCloudData();
+      showToast("登录成功");
+    } catch (error) {
+      console.warn("邮箱验证码登录失败。", error);
+      showToast(error.message || "验证码无效或已过期");
+    } finally {
+      button.disabled = false;
+      button.textContent = "验证码登录";
     }
   }
 
@@ -834,6 +871,7 @@
 
   function bindEvents() {
     $("#authForm").addEventListener("submit", handleLogin);
+    $("#verifyOtpBtn").addEventListener("click", handleVerifyOtp);
     $("#googleLoginBtn").addEventListener("click", handleGoogleLogin);
     $("#signOutBtn").addEventListener("click", handleSignOut);
     $("#migrateLocalBtn").addEventListener("click", handleMigrateLocalData);

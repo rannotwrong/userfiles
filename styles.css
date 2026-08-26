@@ -219,6 +219,12 @@ h1 {
   border-radius: 999px;
   background: var(--surface);
 }
+.auth-actions .otp-input {
+  width: 132px;
+  text-align: center;
+  letter-spacing: .12em;
+  font-weight: 750;
+}
 .google-btn {
   display: inline-flex;
   align-items: center;

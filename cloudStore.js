@@ -155,10 +155,21 @@
     const { error } = await client.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin + window.location.pathname
+        emailRedirectTo: getRedirectUrl()
       }
     });
     if (error) throw error;
+  }
+
+  async function verifyEmailOtp(email, token) {
+    if (!client) throw new Error("Supabase 尚未配置，请先填写 supabase-config.js。");
+    const { data, error } = await client.auth.verifyOtp({
+      email,
+      token,
+      type: "email"
+    });
+    if (error) throw error;
+    return data.session;
   }
 
   async function signInWithGoogle() {
@@ -166,10 +177,18 @@
     const { error } = await client.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin + window.location.pathname
+        redirectTo: getRedirectUrl()
       }
     });
     if (error) throw error;
+  }
+
+  function getRedirectUrl() {
+    const productionUrl = "https://rannotwrong.github.io/userfiles/";
+    if (/^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname)) {
+      return productionUrl;
+    }
+    return window.location.origin + window.location.pathname;
   }
 
   async function signOut() {
@@ -334,6 +353,7 @@
     getLegacyUsers,
     getSession,
     signInWithEmail,
+    verifyEmailOtp,
     signInWithGoogle,
     signOut,
     initCurrentUser,

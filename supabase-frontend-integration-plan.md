@@ -66,14 +66,24 @@ const { data } = await supabase.auth.getSession();
 
 如果未登录，展示登录区域；如果已登录，进入档案台并加载云端数据。
 
-当前已支持邮箱验证码登录：
+当前已支持邮箱验证码和邮件链接两种方式。发送邮件时，回跳地址固定为线上 GitHub Pages 页面，避免本地预览发送邮件后跳回 `localhost`：
 
 ```js
 await supabase.auth.signInWithOtp({
   email,
   options: {
-    emailRedirectTo: window.location.origin + window.location.pathname
+    emailRedirectTo: "https://rannotwrong.github.io/userfiles/"
   }
+});
+```
+
+如果邮件里包含验证码，可以直接在页面输入验证码完成登录：
+
+```js
+await supabase.auth.verifyOtp({
+  email,
+  token,
+  type: "email"
 });
 ```
 
@@ -83,7 +93,7 @@ await supabase.auth.signInWithOtp({
 await supabase.auth.signInWithOAuth({
   provider: "google",
   options: {
-    redirectTo: window.location.origin + window.location.pathname
+    redirectTo: "https://rannotwrong.github.io/userfiles/"
   }
 });
 ```

@@ -37,8 +37,11 @@
       </div>
       <form class="auth-actions" id="authForm">
         <label class="sr-only" for="authEmail">登录邮箱</label>
-        <input id="authEmail" type="email" placeholder="输入邮箱，接收登录链接" autocomplete="email">
-        <button class="primary-btn" id="sendLoginBtn" type="submit">发送登录链接</button>
+        <input id="authEmail" type="email" placeholder="输入邮箱，接收验证码" autocomplete="email">
+        <button class="primary-btn" id="sendLoginBtn" type="submit">发送验证码</button>
+        <label class="sr-only" for="authOtp">邮箱验证码</label>
+        <input id="authOtp" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="输入邮箱验证码" hidden>
+        <button class="secondary-btn" id="verifyOtpBtn" type="button" hidden>验证码登录</button>
         <button class="google-btn" id="googleLoginBtn" type="button" aria-label="使用 Google 登录">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M21.6 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.33 2.98-7.51Z"></path>
