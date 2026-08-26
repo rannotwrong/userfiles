@@ -184,11 +184,7 @@
   }
 
   function getRedirectUrl() {
-    const productionUrl = "https://rannotwrong.github.io/userfiles/";
-    if (/^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname)) {
-      return productionUrl;
-    }
-    return window.location.origin + window.location.pathname;
+    return config.redirectUrl || "https://rannotwrong.github.io/userfiles/";
   }
 
   async function signOut() {

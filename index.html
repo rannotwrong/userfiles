@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户增长档案台">
   <title>用户增长档案台 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260826-otp">
+  <link rel="stylesheet" href="./styles.css?v=20260826-authfix">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -26,22 +26,23 @@
           
         </div>
       </div>
-      <time class="date-stamp" id="dateStamp" aria-label="今天日期"></time>
+      <time class="date-stamp" id="dateStamp" aria-label="今天日期">08/26周三</time>
     </header>
 
     <section class="auth-panel reveal reveal-2" id="authPanel" aria-label="账号与云端同步">
       <div>
         <p class="section-kicker">CLOUD SYNC</p>
         <h2 id="authTitle">云端同步</h2>
-        <p id="authStatus">正在检查登录状态…</p>
+        <p id="authStatus">登录后，用户档案会保存到 Supabase 云端，可在多设备同步。</p>
+        <p class="auth-hint">若邮件链接仍跳到 localhost，请不要点链接，直接复制邮件里的验证码登录。</p>
       </div>
       <form class="auth-actions" id="authForm">
         <label class="sr-only" for="authEmail">登录邮箱</label>
         <input id="authEmail" type="email" placeholder="输入邮箱，接收验证码" autocomplete="email">
         <button class="primary-btn" id="sendLoginBtn" type="submit">发送验证码</button>
         <label class="sr-only" for="authOtp">邮箱验证码</label>
-        <input id="authOtp" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="输入邮箱验证码" hidden>
-        <button class="secondary-btn" id="verifyOtpBtn" type="button" hidden>验证码登录</button>
+        <input id="authOtp" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="输入邮箱验证码">
+        <button class="secondary-btn" id="verifyOtpBtn" type="button">验证码登录</button>
         <button class="google-btn" id="googleLoginBtn" type="button" aria-label="使用 Google 登录">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M21.6 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.33 2.98-7.51Z"></path>
@@ -52,7 +53,7 @@
           使用 Google 登录
         </button>
         <button class="secondary-btn" id="migrateLocalBtn" type="button" hidden>迁移本机数据</button>
-        <button class="secondary-btn" id="signOutBtn" type="button" hidden>退出登录</button>
+        <button class="secondary-btn" id="signOutBtn" type="button" hidden="">退出登录</button>
       </form>
     </section>
 
@@ -63,7 +64,7 @@
             <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           </span>
           <span class="stat-label">总人数</span>
-          <strong id="statTotal">3</strong>
+          <strong id="statTotal">0</strong>
           <small>已记录用户</small>
         </article>
         <article class="stat">
@@ -79,7 +80,7 @@
             <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
           </span>
           <span class="stat-label">本月新增</span>
-          <strong id="statNew">2</strong>
+          <strong id="statNew">0</strong>
           <small>持续认识新朋友</small>
         </article>
       </section>
@@ -121,9 +122,17 @@
               <p class="section-kicker">USER NOTES</p>
               <h2 id="listTitle">我的用户</h2>
             </div>
-            <span class="result-count" id="resultCount" aria-live="polite">3 位</span>
+            <span class="result-count" id="resultCount" aria-live="polite">0 位</span>
           </div>
-          <div class="user-grid" id="userGrid" aria-live="polite"></div>
+          <div class="user-grid" id="userGrid" aria-live="polite">
+      <div class="empty">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 8v4l2 2"></path>
+          <circle cx="12" cy="12" r="9"></circle>
+        </svg>
+        <p>这一页还没有记录</p>
+        <small>换个筛选条件，或新增一位用户吧。</small>
+      </div></div>
         </section>
 
         <aside class="import-panel" aria-labelledby="importTitle">
@@ -349,7 +358,7 @@
           </div>
           <div class="form-field">
             <label class="field-label" for="tier">当前分层（保存后自动重算）</label>
-            <select id="tier" disabled>
+            <select id="tier" disabled="">
               <option value="S">S · 最高价值用户</option>
               <option value="A">A · 核心用户</option>
               <option value="B">B · 高潜用户</option>
@@ -362,7 +371,52 @@
           </div>
           <div class="form-field full">
             <span class="field-label">核心标签（最多 3 个）</span>
-            <div class="check-grid" id="tagOptions"></div>
+            <div class="check-grid" id="tagOptions">
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="高额支持">
+        <span>高额支持</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="稳定陪伴">
+        <span>稳定陪伴</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="氛围带动">
+        <span>氛围带动</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="点歌偏好">
+        <span>点歌偏好</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="情绪支持">
+        <span>情绪支持</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="预算敏感">
+        <span>预算敏感</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="新进观望">
+        <span>新进观望</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="潜水守候">
+        <span>潜水守候</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="目的用户">
+        <span>目的用户</span>
+      </label>
+    </div>
             <p class="form-error" id="tagsError"></p>
           </div>
           <div class="form-field full">
@@ -413,7 +467,7 @@
                 <span>愿意接话</span>
               </label>
               <label class="check-chip">
-                <input type="checkbox" id="isNoPurpose" checked>
+                <input type="checkbox" id="isNoPurpose" checked="">
                 <span>无目的</span>
               </label>
               <label class="check-chip">
@@ -511,11 +565,12 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./supabase-config.js?v=20260826-otp"></script>
-  <script src="./cloudStore.js?v=20260826-otp"></script>
-  <script src="./mock.js?v=20260826-otp"></script>
-  <script src="./api.js?v=20260826-otp"></script>
-  <script src="./app.js?v=20260826-otp"></script>
+  <script src="./supabase-config.js?v=20260826-authfix"></script>
+  <script src="./cloudStore.js?v=20260826-authfix"></script>
+  <script src="./mock.js?v=20260826-authfix"></script>
+  <script src="./api.js?v=20260826-authfix"></script>
+  <script src="./app.js?v=20260826-authfix"></script>
+
 
 
 </body></html>
