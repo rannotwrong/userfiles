@@ -216,7 +216,7 @@
     panel.classList.toggle("is-warning", !state.cloudEnabled);
 
     if (!state.cloudEnabled) {
-      status.textContent = "Supabase 尚未配置，当前为本机演示模式。填写配置后即可启用多设备同步。";
+      status.textContent = "";
       emailInput.hidden = true;
       otpInput.hidden = true;
       sendButton.hidden = true;
@@ -237,7 +237,7 @@
       return;
     }
 
-    status.textContent = "登录后，用户档案会保存到 Supabase 云端，可在多设备同步。";
+    status.textContent = "";
     emailInput.hidden = false;
     sendButton.hidden = false;
     otpInput.hidden = false;
@@ -1018,11 +1018,6 @@
   }
 
   async function init() {
-    $("#dateStamp").textContent = new Intl.DateTimeFormat("zh-CN", {
-      month: "2-digit",
-      day: "2-digit",
-      weekday: "short"
-    }).format(new Date());
     buildTagOptions();
     bindEvents();
     renderAuthPanel();

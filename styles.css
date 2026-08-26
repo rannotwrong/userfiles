@@ -124,25 +124,17 @@ svg {
   display: grid;
   place-items: center;
   border-radius: 18px;
-  color: white;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, .2), transparent 42%),
     linear-gradient(135deg, var(--primary) 0%, #4ac7ff 52%, var(--violet) 100%);
   box-shadow: 0 14px 32px rgba(18, 184, 200, .22);
+  overflow: hidden;
 }
-.fish-logo {
-  width: 34px;
-  height: 34px;
-  filter: drop-shadow(0 4px 10px rgba(7, 84, 100, .18));
-}
-.fish-logo path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-}
-.fish-logo circle {
-  fill: currentColor;
-  stroke: none;
+.brand-logo {
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 12px rgba(7, 84, 100, .16));
 }
 .eyebrow,
 .section-kicker {
@@ -203,11 +195,6 @@ h1 {
 .auth-panel p {
   margin: 0;
   color: var(--muted);
-}
-.auth-panel .auth-hint {
-  margin-top: 6px;
-  color: var(--primary-dark);
-  font-size: 12px;
 }
 .auth-actions {
   display: flex;
@@ -1109,8 +1096,7 @@ dialog::backdrop {
     height: 42px;
     border-radius: 14px;
   }
-  .fish-logo { width: 28px; height: 28px; }
-  .date-stamp { display: none; }
+  .brand-logo { width: 92%; height: 92%; }
   .view-tabs { width: 100%; }
   .view-tab { flex: 1; }
   .stats { gap: var(--space-2); }

@@ -3,9 +3,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f8fc">
-  <meta name="description" content="为个人运营者设计的云端用户增长档案台">
-  <title>用户增长档案台 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260826-email-template">
+  <meta name="description" content="为个人运营者设计的云端用户日记">
+  <title>用户日记 · User Atlas</title>
+  <link rel="stylesheet" href="./styles.css?v=20260826-user-diary">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -13,28 +13,22 @@
   <div class="app-shell">
     <header class="topbar reveal reveal-1">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">
-          <svg class="fish-logo" viewBox="0 0 48 48">
-            <path d="M7 24C13.5 14.5 25.5 11.5 36 18.5L43 14.5V33.5L36 29.5C25.5 36.5 13.5 33.5 7 24Z"></path>
-            <path d="M17 20.5C20.5 23.5 20.5 24.5 17 27.5"></path>
-            <circle cx="31.5" cy="22.5" r="1.4"></circle>
-          </svg>
+        <div class="brand-mark" aria-hidden="true" style="position: relative;">
+          <img class="brand-logo" src="./logo.png" alt="">
         </div>
         <div>
           <p class="eyebrow">USER ATLAS</p>
-          <h1>用户增长档案台</h1>
+          <h1 style="position: relative;">用户日记</h1>
           
         </div>
       </div>
-      <time class="date-stamp" id="dateStamp" aria-label="今天日期">08/26周三</time>
     </header>
 
     <section class="auth-panel reveal reveal-2" id="authPanel" aria-label="账号与云端同步">
       <div>
         <p class="section-kicker">CLOUD SYNC</p>
         <h2 id="authTitle">云端同步</h2>
-        <p id="authStatus">登录后，用户档案会保存到 Supabase 云端，可在多设备同步。</p>
-        <p class="auth-hint">优先复制邮件验证码登录；如果邮件只有 Sign in 链接，请在 Supabase 邮件模板里加入验证码。</p>
+        <p id="authStatus" class="sr-only" aria-live="polite"></p>
       </div>
       <form class="auth-actions" id="authForm">
         <label class="sr-only" for="authEmail">登录邮箱</label>
@@ -564,11 +558,12 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./supabase-config.js?v=20260826-email-template"></script>
-  <script src="./cloudStore.js?v=20260826-email-template"></script>
-  <script src="./mock.js?v=20260826-email-template"></script>
-  <script src="./api.js?v=20260826-email-template"></script>
-  <script src="./app.js?v=20260826-email-template"></script>
+  <script src="./supabase-config.js?v=20260826-user-diary"></script>
+  <script src="./cloudStore.js?v=20260826-user-diary"></script>
+  <script src="./mock.js?v=20260826-user-diary"></script>
+  <script src="./api.js?v=20260826-user-diary"></script>
+  <script src="./app.js?v=20260826-user-diary"></script>
+
 
 
 
