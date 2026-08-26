@@ -1,5 +1,6 @@
 (function () {
   const STORAGE_KEY = "user_profile_notebook_v2";
+  const TREND_PLAN_KEY = "user_profile_trend_plan_v1";
   const cloudStore = window.UserAtlasCloudStore;
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -21,7 +22,12 @@
     detailUserId: null,
     cloudEnabled: Boolean(cloudStore?.isConfigured),
     currentUser: null,
-    isLoading: true
+    isLoading: true,
+    trendFilters: {
+      dailyDate: toDateKey(new Date()),
+      weeklyPeriod: toWeekInputValue(new Date()),
+      monthlyPeriod: toMonthKey(new Date())
+    }
   };
 
   function loadLocalUsers() {
@@ -39,6 +45,55 @@
 
   function dedupe(items) {
     return [...new Set(items.filter(Boolean))];
+  }
+
+  function pad2(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function toDateKey(value = new Date()) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+  }
+
+  function toMonthKey(value = new Date()) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
+  }
+
+  function addDays(date, days) {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+  }
+
+  function startOfISOWeek(value = new Date()) {
+    const date = value instanceof Date ? new Date(value) : new Date(value);
+    if (Number.isNaN(date.getTime())) return new Date();
+    const day = date.getDay() || 7;
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - day + 1);
+    return date;
+  }
+
+  function toWeekInputValue(value = new Date()) {
+    const date = startOfISOWeek(value);
+    const thursday = addDays(date, 3);
+    const firstThursday = new Date(thursday.getFullYear(), 0, 4);
+    const firstWeekStart = startOfISOWeek(firstThursday);
+    const week = Math.floor((thursday - firstWeekStart) / 604800000) + 1;
+    return `${thursday.getFullYear()}-W${pad2(week)}`;
+  }
+
+  function weekInputToStartDate(value) {
+    const match = String(value || "").match(/^(\d{4})-W(\d{2})$/);
+    if (!match) return startOfISOWeek(new Date());
+    const year = Number(match[1]);
+    const week = Number(match[2]);
+    const firstWeekStart = startOfISOWeek(new Date(year, 0, 4));
+    return addDays(firstWeekStart, (week - 1) * 7);
   }
 
   function splitTags(value = "") {
@@ -349,27 +404,31 @@
     }
     try {
       const trends = await cloudStore.listTrends();
-      const dailyLatest = trends.daily[0];
+      const dailyHistory = trends.daily.map((item) => ({
+        date: item.live_date,
+        revenue: Number(item.daily_revenue || 0),
+        paidUsers: Number(item.paid_user_count || 0),
+        firstPaidUsers: Number(item.first_paid_user_count || 0),
+        sRevenueRate: Number(item.s_user_revenue_rate || 0),
+        potentialUsers: Number(item.new_potential_user_count || 0)
+      }));
+      const dailyLatest = dailyHistory[0];
       const weekly = trends.weekly.map((item) => ({
+        weekStart: item.week_start_date,
+        week: item.week_start_date ? toWeekInputValue(`${item.week_start_date}T00:00:00`) : "",
         label: item.week_start_date?.slice(5) || "本周",
         revenue: Number(item.weekly_revenue || 0),
         potentialUsers: Number(item.new_potential_user_count || 0)
       }));
       const monthly = trends.monthly.map((item) => ({
+        month: item.month_start_date?.slice(0, 7) || "",
         label: item.month_start_date?.slice(0, 7) || "本月",
         revenue: Number(item.monthly_revenue || 0),
         potentialUsers: Number(item.new_potential_user_count || 0)
       }));
 
       state.trends = {
-        daily: dailyLatest ? {
-          date: dailyLatest.live_date || "最近一天",
-          revenue: Number(dailyLatest.daily_revenue || 0),
-          paidUsers: Number(dailyLatest.paid_user_count || 0),
-          firstPaidUsers: Number(dailyLatest.first_paid_user_count || 0),
-          sRevenueRate: Number(dailyLatest.s_user_revenue_rate || 0),
-          potentialUsers: Number(dailyLatest.new_potential_user_count || 0)
-        } : window.NotebookMock.liveTrends.daily,
+        daily: dailyLatest || window.NotebookMock.liveTrends.daily,
         weekly: weekly.length ? {
           revenue: weekly.reduce((sum, item) => sum + item.revenue, 0),
           potentialUsers: weekly.reduce((sum, item) => sum + item.potentialUsers, 0),
@@ -379,7 +438,10 @@
           revenue: monthly.reduce((sum, item) => sum + item.revenue, 0),
           potentialUsers: monthly.reduce((sum, item) => sum + item.potentialUsers, 0),
           trend: monthly
-        } : window.NotebookMock.liveTrends.monthly
+        } : window.NotebookMock.liveTrends.monthly,
+        dailyHistory,
+        weeklyHistory: weekly,
+        monthlyHistory: monthly
       };
     } catch (error) {
       console.warn("直播趋势加载失败。", error);
@@ -472,7 +534,8 @@
   }
 
   function renderLineChart(data, chartId) {
-    const values = data.map((item) => item.revenue);
+    const safeData = data.length ? data : [{ label: "暂无", revenue: 0 }];
+    const values = safeData.map((item) => item.revenue);
     const max = Math.max(...values);
     const min = Math.min(...values);
     const width = 640;
@@ -481,8 +544,8 @@
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
     const range = Math.max(max - min, 1);
-    const points = data.map((item, index) => {
-      const x = padding.left + (chartWidth / Math.max(data.length - 1, 1)) * index;
+    const points = safeData.map((item, index) => {
+      const x = padding.left + (chartWidth / Math.max(safeData.length - 1, 1)) * index;
       const y = padding.top + chartHeight - ((item.revenue - min) / range) * chartHeight;
       return { ...item, x, y };
     });
@@ -509,26 +572,139 @@
       </svg>`;
   }
 
+  function getTrendPlanStore() {
+    try {
+      return JSON.parse(localStorage.getItem(TREND_PLAN_KEY)) || {};
+    } catch (error) {
+      console.warn("趋势目标读取失败。", error);
+      return {};
+    }
+  }
+
+  function getMonthPlan(monthKey, monthlyRevenue = 0) {
+    const saved = getTrendPlanStore()[monthKey] || {};
+    return {
+      liveCount: toNumber(saved.liveCount),
+      targetRevenue: toNumber(saved.targetRevenue),
+      forecastRevenue: toNumber(saved.forecastRevenue),
+      actualRevenue: Object.prototype.hasOwnProperty.call(saved, "actualRevenue")
+        ? toNumber(saved.actualRevenue)
+        : toNumber(monthlyRevenue)
+    };
+  }
+
+  function saveMonthPlan() {
+    const monthKey = state.trendFilters.monthlyPeriod || toMonthKey(new Date());
+    const store = getTrendPlanStore();
+    store[monthKey] = {
+      liveCount: toNumber($("#monthLiveCount").value),
+      targetRevenue: toNumber($("#monthTargetRevenue").value),
+      forecastRevenue: toNumber($("#monthForecastRevenue").value),
+      actualRevenue: toNumber($("#monthActualRevenue").value)
+    };
+    localStorage.setItem(TREND_PLAN_KEY, JSON.stringify(store));
+  }
+
+  function renderMonthPlan(monthKey, monthlyRevenue) {
+    const plan = getMonthPlan(monthKey, monthlyRevenue);
+    $("#monthLiveCount").value = plan.liveCount;
+    $("#monthTargetRevenue").value = plan.targetRevenue;
+    $("#monthForecastRevenue").value = plan.forecastRevenue;
+    $("#monthActualRevenue").value = plan.actualRevenue;
+  }
+
+  function emptyDailyTrend(dateKey) {
+    return {
+      date: dateKey,
+      revenue: 0,
+      paidUsers: 0,
+      firstPaidUsers: 0,
+      sRevenueRate: 0,
+      potentialUsers: 0
+    };
+  }
+
+  function getDailyTrend(trends, dateKey) {
+    const history = Array.isArray(trends.dailyHistory) ? trends.dailyHistory : [];
+    if (history.length) return history.find((item) => item.date === dateKey) || emptyDailyTrend(dateKey);
+    return trends.daily || emptyDailyTrend(dateKey);
+  }
+
+  function getWeeklyTrend(trends, weekValue) {
+    const dailyHistory = Array.isArray(trends.dailyHistory) ? trends.dailyHistory : [];
+    const start = weekInputToStartDate(weekValue);
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const dateKey = toDateKey(addDays(start, index));
+      const item = dailyHistory.find((entry) => entry.date === dateKey);
+      return {
+        label: ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][index],
+        revenue: toNumber(item?.revenue),
+        potentialUsers: toNumber(item?.potentialUsers)
+      };
+    });
+    const weeklyHistory = Array.isArray(trends.weeklyHistory) ? trends.weeklyHistory : [];
+    const matchedWeek = weeklyHistory.find((item) => item.week === weekValue);
+    if (dailyHistory.length) {
+      return {
+        revenue: days.reduce((sum, item) => sum + item.revenue, 0),
+        potentialUsers: days.reduce((sum, item) => sum + item.potentialUsers, 0),
+        trend: days
+      };
+    }
+    return matchedWeek || trends.weekly || { revenue: 0, potentialUsers: 0, trend: [] };
+  }
+
+  function getMonthlyTrend(trends, monthKey) {
+    const weeklyHistory = Array.isArray(trends.weeklyHistory) ? trends.weeklyHistory : [];
+    const monthlyHistory = Array.isArray(trends.monthlyHistory) ? trends.monthlyHistory : [];
+    const monthWeeks = weeklyHistory.filter((item) => item.weekStart?.startsWith(monthKey));
+    const matchedMonth = monthlyHistory.find((item) => item.month === monthKey);
+    if (monthWeeks.length) {
+      return {
+        revenue: monthWeeks.reduce((sum, item) => sum + item.revenue, 0),
+        potentialUsers: monthWeeks.reduce((sum, item) => sum + item.potentialUsers, 0),
+        trend: monthWeeks.map((item, index) => ({
+          label: `第${index + 1}周`,
+          revenue: item.revenue
+        }))
+      };
+    }
+    return matchedMonth
+      ? { revenue: matchedMonth.revenue, potentialUsers: matchedMonth.potentialUsers, trend: [matchedMonth] }
+      : (trends.monthly || { revenue: 0, potentialUsers: 0, trend: [] });
+  }
+
   function renderTrends() {
     const trends = state.trends || window.NotebookMock.liveTrends;
-    $("#dailyPeriod").textContent = trends.daily.date;
+    const dailyDate = state.trendFilters.dailyDate || toDateKey(new Date());
+    const weeklyPeriod = state.trendFilters.weeklyPeriod || toWeekInputValue(new Date());
+    const monthlyPeriod = state.trendFilters.monthlyPeriod || toMonthKey(new Date());
+    const daily = getDailyTrend(trends, dailyDate);
+    const weekly = getWeeklyTrend(trends, weeklyPeriod);
+    const monthly = getMonthlyTrend(trends, monthlyPeriod);
+
+    $("#dailyDate").value = dailyDate;
+    $("#weeklyPeriod").value = weeklyPeriod;
+    $("#monthlyPeriod").value = monthlyPeriod;
+    renderMonthPlan(monthlyPeriod, monthly.revenue);
+
     $("#dailyMetrics").innerHTML = [
-      metricCard("日收入", formatCurrency(trends.daily.revenue), "今日直播成交"),
-      metricCard("付费用户数", `${trends.daily.paidUsers} 人`, "完成支付的用户"),
-      metricCard("首次付费用户", `${trends.daily.firstPaidUsers} 人`, "首次完成支付"),
-      metricCard("S级用户付费率", formatPercent(trends.daily.sRevenueRate), "S级用户收入 / 总收入"),
-      metricCard("新增潜力用户数", `${trends.daily.potentialUsers} 人`, "新增 A/B 潜力池")
+      metricCard("日收入", formatCurrency(daily.revenue), `${dailyDate} 直播成交`),
+      metricCard("支持用户数", `${daily.paidUsers} 人`, "完成支持的用户"),
+      metricCard("首次支持用户", `${daily.firstPaidUsers} 人`, "首次完成支持"),
+      metricCard("S级用户支持率", formatPercent(daily.sRevenueRate), "S级用户收入 / 总收入"),
+      metricCard("新增潜力用户数", `${daily.potentialUsers} 人`, "新增 A/B 潜力池")
     ].join("");
     $("#weeklyMetrics").innerHTML = [
-      metricCard("周收入", formatCurrency(trends.weekly.revenue), "本周累计"),
-      metricCard("新增潜力用户数", `${trends.weekly.potentialUsers} 人`, "本周新增")
+      metricCard("周收入", formatCurrency(weekly.revenue), "所选周累计"),
+      metricCard("新增潜力用户数", `${weekly.potentialUsers} 人`, "所选周新增")
     ].join("");
     $("#monthlyMetrics").innerHTML = [
-      metricCard("月收入", formatCurrency(trends.monthly.revenue), "本月累计"),
-      metricCard("新增潜力用户数", `${trends.monthly.potentialUsers} 人`, "本月新增")
+      metricCard("月收入", formatCurrency(monthly.revenue), "所选月累计"),
+      metricCard("新增潜力用户数", `${monthly.potentialUsers} 人`, "所选月新增")
     ].join("");
-    $("#weeklyChart").innerHTML = renderLineChart(trends.weekly.trend, "weeklyRevenue");
-    $("#monthlyChart").innerHTML = renderLineChart(trends.monthly.trend, "monthlyRevenue");
+    $("#weeklyChart").innerHTML = renderLineChart(weekly.trend || [], "weeklyRevenue");
+    $("#monthlyChart").innerHTML = renderLineChart(monthly.trend || [], "monthlyRevenue");
   }
 
   function switchView(viewName) {
@@ -927,6 +1103,21 @@
     });
     $$("[data-view-target]").forEach((button) => {
       button.addEventListener("click", () => switchView(button.dataset.viewTarget));
+    });
+    $("#dailyDate").addEventListener("change", (event) => {
+      state.trendFilters.dailyDate = event.target.value || toDateKey(new Date());
+      renderTrends();
+    });
+    $("#weeklyPeriod").addEventListener("change", (event) => {
+      state.trendFilters.weeklyPeriod = event.target.value || toWeekInputValue(new Date());
+      renderTrends();
+    });
+    $("#monthlyPeriod").addEventListener("change", (event) => {
+      state.trendFilters.monthlyPeriod = event.target.value || toMonthKey(new Date());
+      renderTrends();
+    });
+    ["monthLiveCount", "monthTargetRevenue", "monthForecastRevenue", "monthActualRevenue"].forEach((id) => {
+      $(`#${id}`).addEventListener("input", saveMonthPlan);
     });
 
     $("#userForm").addEventListener("submit", async (event) => {

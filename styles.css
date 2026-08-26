@@ -639,6 +639,8 @@ input[type="text"],
 input[type="number"],
 input[type="datetime-local"],
 input[type="date"],
+input[type="week"],
+input[type="month"],
 select {
   width: 100%;
   padding: 11px 12px;
@@ -734,6 +736,7 @@ textarea {
   gap: var(--space-6);
 }
 .trend-head,
+.trend-plan-card,
 .trend-section,
 .chart-card {
   border: 1px solid var(--line);
@@ -754,6 +757,55 @@ textarea {
   letter-spacing: -.03em;
 }
 .trend-head h2 { font-size: 24px; }
+.trend-plan-card {
+  padding: 20px;
+}
+.trend-plan-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.trend-plan-head h3 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -.02em;
+}
+.plan-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+.plan-field {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(248, 251, 255, .86), rgba(255, 255, 255, .96));
+}
+.plan-field span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.plan-field input {
+  width: 100%;
+  padding: 4px 0 0;
+  color: var(--text);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 780;
+  line-height: 1.08;
+  letter-spacing: -.04em;
+}
+.plan-field input:focus-visible {
+  outline: 0;
+  box-shadow: inset 0 -2px 0 rgba(18, 184, 200, .45);
+}
 .trend-section {
   padding: 20px;
 }
@@ -764,7 +816,8 @@ textarea {
   gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
-.trend-period {
+.trend-period,
+.period-control {
   display: inline-flex;
   align-items: center;
   min-height: 28px;
@@ -774,6 +827,26 @@ textarea {
   background: var(--primary-soft);
   font-size: 12px;
   font-weight: 700;
+}
+.period-control {
+  gap: var(--space-2);
+}
+.period-control span {
+  white-space: nowrap;
+}
+.period-control input {
+  width: auto;
+  min-width: 126px;
+  padding: 0;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+.period-control input:focus-visible {
+  outline: 2px solid rgba(18, 184, 200, .32);
+  outline-offset: 2px;
 }
 .metric-grid {
   display: grid;
@@ -1065,6 +1138,7 @@ dialog::backdrop {
 @media (min-width: 680px) {
   .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .metric-grid-five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toolbar {
     flex-direction: row;
     align-items: center;
@@ -1078,6 +1152,7 @@ dialog::backdrop {
 @media (min-width: 1024px) {
   .trend-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metric-grid-five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .plan-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .workspace {
     grid-template-columns: minmax(0, 1fr) 304px;
     grid-template-areas: "toolbar toolbar" "list import";
@@ -1117,8 +1192,17 @@ dialog::backdrop {
   .toolbar > .primary-btn { width: 100%; }
   .dialog-actions > button { flex: 1; }
   .detail-row { grid-template-columns: 80px 1fr; }
+  .trend-plan-head,
+  .trend-section-head {
+    flex-direction: column;
+  }
+  .period-control {
+    width: 100%;
+    justify-content: space-between;
+  }
   .metric-grid,
-  .metric-grid.compact { grid-template-columns: 1fr; }
+  .metric-grid.compact,
+  .plan-grid { grid-template-columns: 1fr; }
 }
 
 @media (hover: hover) {

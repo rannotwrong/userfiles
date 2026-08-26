@@ -172,13 +172,40 @@
       </section>
 
       <section class="trend-page reveal reveal-3" data-view="live" aria-labelledby="trendTitle">
-        <div class="trend-head" style="position: relative;">
+        <div class="trend-head">
           <div>
             <p class="section-kicker">LIVE ANALYTICS</p>
             <h2 id="trendTitle">直播数据趋势</h2>
           </div>
-          <span class="hand-note">Mock Data</span>
         </div>
+
+        <section class="trend-plan-card" aria-labelledby="monthPlanTitle">
+          <div class="trend-plan-head">
+            <div>
+              <p class="section-kicker">MONTH PLAN</p>
+              <h3 id="monthPlanTitle">本月目标</h3>
+            </div>
+            <span class="hint">支持直接编辑，自动保存</span>
+          </div>
+          <div class="plan-grid">
+            <label class="plan-field">
+              <span>本月直播次数</span>
+              <input id="monthLiveCount" type="number" min="0" step="1" value="0">
+            </label>
+            <label class="plan-field">
+              <span>目标收入</span>
+              <input id="monthTargetRevenue" type="number" min="0" step="0.01" value="0">
+            </label>
+            <label class="plan-field">
+              <span>预测收入</span>
+              <input id="monthForecastRevenue" type="number" min="0" step="0.01" value="0">
+            </label>
+            <label class="plan-field">
+              <span>本月收入</span>
+              <input id="monthActualRevenue" type="number" min="0" step="0.01" value="0">
+            </label>
+          </div>
+        </section>
 
         <section class="trend-section" aria-labelledby="dailyTrendTitle">
           <div class="trend-section-head">
@@ -186,7 +213,10 @@
               <p class="section-kicker">DAY</p>
               <h3 id="dailyTrendTitle">日维度</h3>
             </div>
-            <span class="trend-period" id="dailyPeriod">今日</span>
+            <label class="period-control" for="dailyDate">
+              <span>选择日期</span>
+              <input id="dailyDate" type="date">
+            </label>
           </div>
           <div class="metric-grid metric-grid-five" id="dailyMetrics">
       <article class="metric-card">
@@ -195,14 +225,14 @@
         <small>今日直播成交</small>
       </article>
       <article class="metric-card">
-        <span>付费用户数</span>
+        <span>支持用户数</span>
         <strong>42 人</strong>
-        <small>完成支付的用户</small>
+        <small>完成支持的用户</small>
       </article>
       <article class="metric-card">
-        <span>首次付费用户</span>
+        <span>首次支持用户</span>
         <strong>18 人</strong>
-        <small>首次完成支付</small>
+        <small>首次完成支持</small>
       </article>
       <article class="metric-card">
         <span>S级用户付费率</span>
@@ -223,6 +253,10 @@
                 <p class="section-kicker">WEEK</p>
                 <h3 id="weeklyTrendTitle">周维度</h3>
               </div>
+              <label class="period-control" for="weeklyPeriod">
+                <span>选择周</span>
+                <input id="weeklyPeriod" type="week">
+              </label>
             </div>
             <div class="metric-grid compact" id="weeklyMetrics">
       <article class="metric-card">
@@ -284,6 +318,10 @@
                 <p class="section-kicker">MONTH</p>
                 <h3 id="monthlyTrendTitle">月维度</h3>
               </div>
+              <label class="period-control" for="monthlyPeriod">
+                <span>选择月</span>
+                <input id="monthlyPeriod" type="month">
+              </label>
             </div>
             <div class="metric-grid compact" id="monthlyMetrics">
       <article class="metric-card">
@@ -561,6 +599,7 @@
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260826-auth-stats"></script>
   <script src="./app.js?v=20260826-auth-stats"></script>
+
 
 
 
