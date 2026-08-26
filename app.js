@@ -337,7 +337,8 @@
   function updateStats() {
     const now = new Date();
     $("#statTotal").textContent = state.users.length;
-    $("#statA").textContent = state.users.filter((user) => user.tier === "S").length;
+    $("#statS").textContent = state.users.filter((user) => user.tier === "S").length;
+    $("#statA").textContent = state.users.filter((user) => user.tier === "A").length;
     $("#statNew").textContent = state.users.filter((user) => {
       const created = new Date(user.createdAt);
       return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();

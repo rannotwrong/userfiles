@@ -245,6 +245,12 @@ h1 {
   border-color: rgba(22, 163, 123, .2);
   background: linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(231, 250, 253, .62));
 }
+.auth-panel.is-connected .auth-actions > :not(#signOutBtn) {
+  display: none !important;
+}
+.auth-panel.is-connected #signOutBtn {
+  display: inline-flex;
+}
 .auth-panel.is-warning {
   border-color: rgba(200, 148, 24, .28);
   background: linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(255, 247, 220, .64));

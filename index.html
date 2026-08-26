@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户日记">
   <title>用户日记 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260826-user-diary-2">
+  <link rel="stylesheet" href="./styles.css?v=20260826-auth-stats">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -30,7 +30,7 @@
         <h2 id="authTitle">云端同步</h2>
         <p id="authStatus" class="sr-only" aria-live="polite"></p>
       </div>
-      <form class="auth-actions" id="authForm">
+      <form class="auth-actions" id="authForm" style="position: relative;">
         <label class="sr-only" for="authEmail">登录邮箱</label>
         <input id="authEmail" type="email" placeholder="输入邮箱，接收验证码" autocomplete="email">
         <button class="primary-btn" id="sendLoginBtn" type="submit">发送验证码</button>
@@ -51,7 +51,7 @@
     </section>
 
     <main id="main">
-      <section class="stats reveal reveal-2" aria-label="用户统计">
+      <section class="stats reveal reveal-2" aria-label="用户统计" style="position: relative;">
         <article class="stat">
           <span class="stat-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -65,8 +65,16 @@
             <svg viewBox="0 0 24 24"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"></path></svg>
           </span>
           <span class="stat-label">S级用户</span>
-          <strong id="statA">0</strong>
+          <strong id="statS">0</strong>
           <small>最高价值关系</small>
+        </article>
+        <article class="stat">
+          <span class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.47 6.04.88-4.37 4.26 1.03 6.02L12 16.79l-5.4 2.84 1.03-6.02-4.37-4.26 6.04-.88L12 3z"></path><path d="M8.8 13h6.4"></path></svg>
+          </span>
+          <span class="stat-label">A级用户</span>
+          <strong id="statA">0</strong>
+          <small>重点维护关系</small>
         </article>
         <article class="stat">
           <span class="stat-icon" aria-hidden="true">
@@ -558,11 +566,12 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./supabase-config.js?v=20260826-user-diary-2"></script>
-  <script src="./cloudStore.js?v=20260826-user-diary-2"></script>
-  <script src="./mock.js?v=20260826-user-diary-2"></script>
-  <script src="./api.js?v=20260826-user-diary-2"></script>
-  <script src="./app.js?v=20260826-user-diary-2"></script>
+  <script src="./supabase-config.js?v=20260826-auth-stats"></script>
+  <script src="./cloudStore.js?v=20260826-auth-stats"></script>
+  <script src="./mock.js?v=20260826-auth-stats"></script>
+  <script src="./api.js?v=20260826-auth-stats"></script>
+  <script src="./app.js?v=20260826-auth-stats"></script>
+
 
 
 
