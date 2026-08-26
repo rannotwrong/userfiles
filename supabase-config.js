@@ -1,6 +1,6 @@
 (function () {
   window.UserAtlasSupabaseConfig = {
-    url: "https://YOUR_PROJECT_REF.supabase.co",
-    anonKey: "YOUR_SUPABASE_ANON_PUBLIC_KEY"
+    url: "https://gxumaswurrfmuyjtkzee.supabase.co/rest/v1/",
+    anonKey: "sb_publishable_-9qcY2skJp7hFlSdtmkVBA_MVDrC7Ho"
   };
 })();
