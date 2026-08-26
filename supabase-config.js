@@ -1,6 +1,6 @@
 (function () {
   window.UserAtlasSupabaseConfig = {
-    url: "https://gxumaswurrfmuyjtkzee.supabase.co/rest/v1/",
+    url: "https://gxumaswurrfmuyjtkzee.supabase.co",
     anonKey: "sb_publishable_-9qcY2skJp7hFlSdtmkVBA_MVDrC7Ho"
   };
 })();
