@@ -5,7 +5,8 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const uid = () => globalThis.crypto?.randomUUID?.() || `u_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
-  const AUTO_TAGS = ["高额支持", "稳定陪伴", "氛围带动", "点歌偏好", "情绪支持", "预算敏感", "新进观望", "潜水守候", "目的用户"];
+  const ZODIAC_TAGS = ["白羊座", "金牛座", "双子座", "巨蟹座", "狮子座", "处女座", "天秤座", "天蝎座", "射手座", "摩羯座", "水瓶座", "双鱼座"];
+  const AUTO_TAGS = ["高额支持", "稳定陪伴", "氛围带动", "点歌偏好", "情绪支持", "预算敏感", "新进观望", "潜水守候", "目的用户", ...ZODIAC_TAGS];
   const toNumber = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
   const toBoolean = (value, fallback = false) => typeof value === "boolean" ? value : fallback;
 
@@ -40,6 +41,29 @@
     return [...new Set(items.filter(Boolean))];
   }
 
+  function splitTags(value = "") {
+    return dedupe(String(value)
+      .split(/[、,，\s]+/)
+      .map((tag) => tag.trim())
+      .filter(Boolean));
+  }
+
+  function getZodiacSign(birthday) {
+    if (!birthday) return "";
+    const match = String(birthday).match(/(?:\d{4}-)?(\d{1,2})-(\d{1,2})/);
+    if (!match) return "";
+    const month = Number(match[1]);
+    const day = Number(match[2]);
+    if (!month || !day) return "";
+    const ranges = [
+      ["摩羯座", 1, 20], ["水瓶座", 2, 19], ["双鱼座", 3, 21], ["白羊座", 4, 20],
+      ["金牛座", 5, 21], ["双子座", 6, 22], ["巨蟹座", 7, 23], ["狮子座", 8, 23],
+      ["处女座", 9, 23], ["天秤座", 10, 24], ["天蝎座", 11, 23], ["射手座", 12, 22],
+      ["摩羯座", 13, 1]
+    ];
+    return ranges.find(([, endMonth, endDay]) => month < endMonth || (month === endMonth && day < endDay))?.[0] || "";
+  }
+
   function getUserMetrics(user) {
     const interactions = Array.isArray(user.interactions) ? user.interactions : [];
     const appearedFromLogs = interactions.filter((item) => item.appeared !== false).length;
@@ -47,6 +71,7 @@
     const spendAmounts = interactions.map((item) => toNumber(item.spendAmount));
     const totalSpendFromLogs = spendAmounts.reduce((sum, value) => sum + value, 0);
     const latestSpendFromLogs = spendAmounts.find((value) => value > 0) || 0;
+    const maxSpendFromLogs = spendAmounts.length ? Math.max(...spendAmounts) : 0;
     const highSingleFromLogs = spendAmounts.filter((value) => value > 1000).length;
     const singleOver200FromLogs = spendAmounts.filter((value) => value > 200).length;
     const appearedCount = Math.max(toNumber(user.appearedCount), appearedFromLogs);
@@ -54,8 +79,9 @@
     const totalLiveCount = Math.max(toNumber(user.totalLiveCount), appearedCount, supportedCount);
     const totalSpendAmount = Math.max(toNumber(user.amount), totalSpendFromLogs);
     const latestSingleSpendAmount = Math.max(toNumber(user.latestSingleSpendAmount), latestSpendFromLogs);
+    const maxSingleSpendAmount = Math.max(toNumber(user.maxSingleSpendAmount), latestSingleSpendAmount, maxSpendFromLogs);
     const highSingleSpendCount = Math.max(toNumber(user.highSingleSpendCount), highSingleFromLogs);
-    const singleSpendOver200Count = Math.max(toNumber(user.singleSpendOver200Count), singleOver200FromLogs, latestSingleSpendAmount > 200 ? 1 : 0);
+    const singleSpendOver200Count = Math.max(toNumber(user.singleSpendOver200Count), singleOver200FromLogs, maxSingleSpendAmount > 200 ? 1 : 0);
     const hasOfflineMealRequest = toBoolean(user.hasOfflineMealRequest) || interactions.some((item) => item.hasOfflineMealRequest);
     const isWillingToReply = toBoolean(user.isWillingToReply) || interactions.some((item) => item.isWillingToReply);
     const isOnlyRankAndChat = interactions.length > 0
@@ -69,6 +95,7 @@
       supportRate: totalLiveCount > 0 ? supportedCount / totalLiveCount : 0,
       totalSpendAmount,
       latestSingleSpendAmount,
+      maxSingleSpendAmount,
       highSingleSpendCount,
       singleSpendOver200Count,
       isWillingToReply,
@@ -84,7 +111,7 @@
     }
     const isA = (
       metrics.totalSpendAmount > 5000 ||
-      (metrics.supportRate > 0.3 && metrics.latestSingleSpendAmount > 500) ||
+      (metrics.supportRate > 0.3 && metrics.maxSingleSpendAmount > 500) ||
       metrics.highSingleSpendCount >= 3
     ) && metrics.isNoPurpose;
     if (isA) return { tier: "A", rule: "A级：满足金额/支持条件之一，且无目的" };
@@ -109,18 +136,21 @@
     if (interactions.some((item) => /没钱|预算|下次再支持|只能小礼物/.test(`${item.remark || ""}${item.note || ""}`)) || /没钱|预算|下次再支持|只能小礼物/.test(`${user.recentEvent || ""}${user.topics || ""}`)) tags.push("预算敏感");
     if (metrics.appearedCount <= 2) tags.push("新进观望");
     if (metrics.appearedCount >= 3 && !metrics.isWillingToReply && metrics.totalSpendAmount <= 1000) tags.push("潜水守候");
+    const zodiacSign = getZodiacSign(user.birthday);
+    if (zodiacSign) tags.push(zodiacSign);
     return dedupe(tags);
   }
 
   function normalizeUser(user, options = {}) {
     const savedSnapshot = user.taggingSnapshot && typeof user.taggingSnapshot === "object" ? user.taggingSnapshot : {};
     const { recalculateTier = false, tierSource = user.tierSource || savedSnapshot.tierSource } = options;
+    const birthday = Object.prototype.hasOwnProperty.call(user, "birthday") ? user.birthday : (savedSnapshot.birthday || "");
     const manualTags = Array.isArray(user.manualTags)
       ? user.manualTags
       : (Array.isArray(user.tags) ? user.tags.filter((tag) => !AUTO_TAGS.includes(tag)) : []);
     const metrics = getUserMetrics(user);
     const classification = classifyTier(metrics);
-    const autoTags = inferAutoTags(user, metrics);
+    const autoTags = inferAutoTags({ ...user, birthday }, metrics);
     const finalTier = recalculateTier
       ? classification.tier
       : (user.tier || classification.tier);
@@ -136,6 +166,7 @@
       tier: finalTier,
       tierSource: finalTierSource,
       systemTier: classification.tier,
+      birthday,
       manualTags,
       autoTags,
       tags: dedupe([...autoTags, ...manualTags]),
@@ -145,6 +176,7 @@
       supportedCount: metrics.supportedCount,
       supportRate: metrics.supportRate,
       latestSingleSpendAmount: metrics.latestSingleSpendAmount,
+      maxSingleSpendAmount: metrics.maxSingleSpendAmount,
       highSingleSpendCount: metrics.highSingleSpendCount,
       singleSpendOver200Count: metrics.singleSpendOver200Count,
       isWillingToReply: metrics.isWillingToReply,
@@ -156,7 +188,9 @@
         ...metrics,
         tierSource: finalTierSource,
         systemTier: classification.tier,
-        effectiveTier: finalTier
+        effectiveTier: finalTier,
+        birthday,
+        maxSingleSpendAmount: metrics.maxSingleSpendAmount
       }
     };
   }
@@ -392,7 +426,7 @@
               <span class="avatar">${escapeHTML(user.nickname.slice(0, 1))}</span>
               <span>
                 <strong class="name">${escapeHTML(user.nickname)}</strong>
-                <span class="level">${escapeHTML(user.level || "普通用户")}</span>
+                <span class="level">${user.birthday ? escapeHTML(getZodiacSign(user.birthday) || "生日已记录") : `最近互动 ${formatDate(user.lastInteraction)}`}</span>
               </span>
             </span>
             <span class="tier tier-${user.tier}" title="${user.tier} 级用户">${user.tier}</span>
@@ -508,7 +542,8 @@
   }
 
   function buildTagOptions(selected = []) {
-    $("#tagOptions").innerHTML = window.NotebookMock.tags.map((tag) => `
+    const defaultTags = window.NotebookMock.tags;
+    $("#tagOptions").innerHTML = defaultTags.map((tag) => `
       <label class="check-chip">
         <input type="checkbox" name="tags" value="${escapeHTML(tag)}" ${selected.includes(tag) ? "checked" : ""}>
         <span>${escapeHTML(tag)}</span>
@@ -526,6 +561,11 @@
         }
       });
     });
+
+    const customTagsInput = $("#customTags");
+    if (customTagsInput) {
+      customTagsInput.value = selected.filter((tag) => !defaultTags.includes(tag)).join("、");
+    }
   }
 
   function openUserForm(user = null) {
@@ -540,18 +580,17 @@
     $("#userId").value = user?.id || "";
     $("#userDialogTitle").textContent = user ? "编辑用户档案" : "新增用户";
     $("#nickname").value = user?.nickname || "";
-    $("#level").value = user?.level || "";
     $("#tier").value = user?.tier || "C";
+    $("#birthday").value = user?.birthday || "";
     $("#occupation").value = user?.occupation || "";
     $("#interests").value = user?.interests || "";
     $("#recentEvent").value = user?.recentEvent || "";
     $("#topics").value = user?.topics || "";
     $("#amount").value = user?.amount || 0;
-    $("#totalLiveCount").value = user?.totalLiveCount || 0;
-    $("#appearedCount").value = user?.appearedCount || 0;
     $("#supportedCount").value = user?.supportedCount || 0;
     $("#latestSingleSpendAmount").value = user?.latestSingleSpendAmount || 0;
     $("#highSingleSpendCount").value = user?.highSingleSpendCount || 0;
+    $("#maxSingleSpendAmount").value = user?.maxSingleSpendAmount || 0;
     $("#lastInteraction").value = toLocalInput(user?.lastInteraction || new Date().toISOString());
     $("#isWillingToReply").checked = Boolean(user?.isWillingToReply);
     $("#isNoPurpose").checked = user?.isNoPurpose !== false;
@@ -570,12 +609,13 @@
     const rows = [
       ["职业", user.occupation || "未记录"],
       ["兴趣", user.interests || "未记录"],
+      ["生日", user.birthday ? `${user.birthday}（${getZodiacSign(user.birthday) || "未识别星座"}）` : "未记录"],
       ["近期事件", user.recentEvent || "未记录"],
       ["聊过的话题", user.topics || "未记录"],
       ["消费情况", `累计 ¥ ${Number(user.amount || 0).toLocaleString("zh-CN")}`],
       ["分层来源", user.tierSource === "system" ? "系统根据直播互动自动判定" : "人工设定"],
       ["支持率", `${formatPercent(user.supportRate || 0)}（支持 ${user.supportedCount || 0} / 直播 ${user.totalLiveCount || 0}）`],
-      ["单次消费", `最近 ¥ ${Number(user.latestSingleSpendAmount || 0).toLocaleString("zh-CN")}；单笔 >1000 次数 ${user.highSingleSpendCount || 0}`],
+      ["单次消费", `最近 ¥ ${Number(user.latestSingleSpendAmount || 0).toLocaleString("zh-CN")}；最高 ¥ ${Number(user.maxSingleSpendAmount || 0).toLocaleString("zh-CN")}；单笔 >1000 次数 ${user.highSingleSpendCount || 0}`],
       ["行为字段", [
         user.isWillingToReply ? "愿意接话" : "未记录接话",
         user.isNoPurpose ? "无目的" : "有目的/需谨慎",
@@ -592,7 +632,7 @@
         <span class="avatar">${escapeHTML(user.nickname.slice(0, 1))}</span>
         <div>
           <h3>${escapeHTML(user.nickname)} <span class="tier tier-${user.tier}">${user.tier}</span></h3>
-          <span class="level">${escapeHTML(user.level || "普通用户")} · 最近互动 ${formatDate(user.lastInteraction)}</span>
+          <span class="level">最近互动 ${formatDate(user.lastInteraction)}</span>
         </div>
       </div>
       <div class="tags">${(user.tags || []).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>
@@ -899,7 +939,10 @@
       }
       const id = $("#userId").value;
       const existing = state.users.find((user) => user.id === id);
-      const manualTags = $$('input[name="tags"]:checked').map((input) => input.value);
+      const manualTags = dedupe([
+        ...$$('input[name="tags"]:checked').map((input) => input.value),
+        ...splitTags($("#customTags").value)
+      ]);
       const manualTier = $("#tier").value || existing?.tier || "C";
       const submitButton = $("#userForm .primary-btn[type='submit']");
       submitButton.disabled = true;
@@ -908,19 +951,21 @@
       const user = normalizeUser({
         id: id || (state.cloudEnabled && state.currentUser ? "" : uid()),
         nickname,
-        level: $("#level").value.trim(),
+        level: existing?.level || "",
         tier: manualTier,
         tierSource: "manual",
+        birthday: $("#birthday").value,
         manualTags,
         occupation: $("#occupation").value.trim(),
         interests: $("#interests").value.trim(),
         recentEvent: $("#recentEvent").value.trim(),
         topics: $("#topics").value.trim(),
         amount: Number($("#amount").value || 0),
-        totalLiveCount: Number($("#totalLiveCount").value || 0),
-        appearedCount: Number($("#appearedCount").value || 0),
+        totalLiveCount: Number(existing?.totalLiveCount || 0),
+        appearedCount: Number(existing?.appearedCount || 0),
         supportedCount: Number($("#supportedCount").value || 0),
         latestSingleSpendAmount: Number($("#latestSingleSpendAmount").value || 0),
+        maxSingleSpendAmount: Number($("#maxSingleSpendAmount").value || 0),
         highSingleSpendCount: Number($("#highSingleSpendCount").value || 0),
         isWillingToReply: $("#isWillingToReply").checked,
         isNoPurpose: $("#isNoPurpose").checked && !$("#hasOfflineMealRequest").checked,
@@ -978,6 +1023,7 @@
         appearedCount: Number(user.appearedCount || 0) + 1,
         supportedCount: Number(user.supportedCount || 0) + (supported ? 1 : 0),
         latestSingleSpendAmount: spendAmount,
+        maxSingleSpendAmount: Math.max(Number(user.maxSingleSpendAmount || 0), spendAmount),
         highSingleSpendCount: Number(user.highSingleSpendCount || 0) + (spendAmount > 1000 ? 1 : 0),
         singleSpendOver200Count: Number(user.singleSpendOver200Count || 0) + (spendAmount > 200 ? 1 : 0),
         isWillingToReply: Boolean(user.isWillingToReply || $("#interactionWilling").checked),

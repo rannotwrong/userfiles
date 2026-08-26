@@ -50,7 +50,9 @@
         ...(user.taggingSnapshot || {}),
         tierSource: user.tierSource || user.taggingSnapshot?.tierSource || "manual",
         systemTier: user.systemTier || user.taggingSnapshot?.systemTier || user.tier || "C",
-        effectiveTier: user.tier || "C"
+        effectiveTier: user.tier || "C",
+        birthday: user.birthday ?? user.taggingSnapshot?.birthday ?? "",
+        maxSingleSpendAmount: toNumber(user.maxSingleSpendAmount ?? user.taggingSnapshot?.maxSingleSpendAmount)
       },
       last_interaction_at: user.lastInteraction || null,
       created_at: user.createdAt || new Date().toISOString()
@@ -87,6 +89,8 @@
       taggingSnapshot: row.tagging_snapshot || {},
       tierSource: row.tagging_snapshot?.tierSource || "manual",
       systemTier: row.tagging_snapshot?.systemTier || row.tier || "C",
+      birthday: row.tagging_snapshot?.birthday || "",
+      maxSingleSpendAmount: toNumber(row.tagging_snapshot?.maxSingleSpendAmount ?? row.latest_single_spend_amount),
       createdAt: row.created_at,
       lastInteraction: row.last_interaction_at,
       interactions
@@ -300,7 +304,9 @@
         ...(user.taggingSnapshot || {}),
         tierSource: safeOperatorType,
         systemTier: user.systemTier || user.taggingSnapshot?.systemTier || user.tier || "C",
-        effectiveTier: user.tier || "C"
+        effectiveTier: user.tier || "C",
+        birthday: user.birthday ?? user.taggingSnapshot?.birthday ?? "",
+        maxSingleSpendAmount: toNumber(user.maxSingleSpendAmount ?? user.taggingSnapshot?.maxSingleSpendAmount)
       },
       operator_type: safeOperatorType
     });

@@ -24,7 +24,7 @@
       </div>
     </header>
 
-    <section class="auth-panel reveal reveal-2" id="authPanel" aria-label="账号与云端同步">
+    <section class="auth-panel reveal reveal-2 is-connected" id="authPanel" aria-label="账号与云端同步">
       <div>
         <p class="section-kicker">CLOUD SYNC</p>
         <h2 id="authTitle">云端同步</h2>
@@ -32,12 +32,12 @@
       </div>
       <form class="auth-actions" id="authForm" style="position: relative;">
         <label class="sr-only" for="authEmail">登录邮箱</label>
-        <input id="authEmail" type="email" placeholder="输入邮箱，接收验证码" autocomplete="email">
-        <button class="primary-btn" id="sendLoginBtn" type="submit">发送验证码</button>
+        <input id="authEmail" type="email" placeholder="输入邮箱，接收验证码" autocomplete="email" hidden="">
+        <button class="primary-btn" id="sendLoginBtn" type="submit" hidden="">发送验证码</button>
         <label class="sr-only" for="authOtp">邮箱验证码</label>
-        <input id="authOtp" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="输入邮箱验证码">
-        <button class="secondary-btn" id="verifyOtpBtn" type="button">验证码登录</button>
-        <button class="google-btn" id="googleLoginBtn" type="button" aria-label="使用 Google 登录">
+        <input id="authOtp" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="输入邮箱验证码" hidden="">
+        <button class="secondary-btn" id="verifyOtpBtn" type="button" hidden="">验证码登录</button>
+        <button class="google-btn" id="googleLoginBtn" type="button" aria-label="使用 Google 登录" hidden="">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M21.6 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.33 2.98-7.51Z"></path>
             <path d="M12 22c2.7 0 4.96-.9 6.62-2.43l-3.24-2.5c-.9.6-2.04.96-3.38.96-2.6 0-4.8-1.76-5.59-4.12H3.06v2.58A10 10 0 0 0 12 22Z"></path>
@@ -46,7 +46,7 @@
           </svg>
           使用 Google 登录
         </button>
-        <button class="secondary-btn" id="signOutBtn" type="button" hidden="">退出登录</button>
+        <button class="secondary-btn" id="signOutBtn" type="button">退出登录</button>
       </form>
     </section>
 
@@ -87,17 +87,17 @@
       </section>
 
       <nav class="view-tabs reveal reveal-3" aria-label="页面切换">
-        <button class="view-tab" type="button" data-view-target="profiles" aria-pressed="true">
+        <button class="view-tab" type="button" data-view-target="profiles" aria-pressed="false">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"></path><path d="M3 6h.01M3 12h.01M3 18h.01"></path></svg>
           用户档案
         </button>
-        <button class="view-tab" type="button" data-view-target="live" aria-pressed="false">
+        <button class="view-tab" type="button" data-view-target="live" aria-pressed="true">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"></path><path d="m7 15 4-4 3 3 5-7"></path></svg>
           直播趋势
         </button>
       </nav>
 
-      <section class="workspace reveal reveal-3" data-view="profiles">
+      <section class="workspace reveal reveal-3" data-view="profiles" hidden="">
         <div class="toolbar">
           <div class="search-wrap">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
@@ -171,8 +171,8 @@
         </aside>
       </section>
 
-      <section class="trend-page reveal reveal-3" data-view="live" hidden="" aria-labelledby="trendTitle">
-        <div class="trend-head">
+      <section class="trend-page reveal reveal-3" data-view="live" aria-labelledby="trendTitle">
+        <div class="trend-head" style="position: relative;">
           <div>
             <p class="section-kicker">LIVE ANALYTICS</p>
             <h2 id="trendTitle">直播数据趋势</h2>
@@ -334,7 +334,7 @@
     </main>
   </div>
 
-  <dialog id="userDialog" aria-labelledby="userDialogTitle">
+  <dialog id="userDialog" aria-labelledby="userDialogTitle" open="">
     <form id="userForm" novalidate="">
       <div class="dialog-head">
         <div>
@@ -346,16 +346,12 @@
         </button>
       </div>
       <div class="dialog-body">
-        <input id="userId" type="hidden">
+        <input id="userId" type="hidden" value="">
         <div class="form-grid">
           <div class="form-field">
             <label class="field-label" for="nickname">昵称 <span aria-hidden="true">*</span></label>
             <input id="nickname" type="text" required="" maxlength="30" aria-describedby="nicknameError">
             <p class="form-error" id="nicknameError"></p>
-          </div>
-          <div class="form-field">
-            <label class="field-label" for="level">等级</label>
-            <input id="level" type="text" placeholder="如：金卡会员 / 新用户">
           </div>
           <div class="form-field">
             <label class="field-label" for="tier">当前分层（人工优先）</label>
@@ -367,57 +363,55 @@
             </select>
           </div>
           <div class="form-field">
+            <label class="field-label" for="birthday">生日</label>
+            <input id="birthday" type="date">
+          </div>
+          <div class="form-field">
             <label class="field-label" for="occupation">职业</label>
             <input id="occupation" type="text" placeholder="如：品牌设计师">
           </div>
           <div class="form-field full">
             <span class="field-label">核心标签（最多 3 个）</span>
             <div class="check-grid" id="tagOptions">
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="高额支持">
-        <span>高额支持</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="稳定陪伴">
-        <span>稳定陪伴</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="氛围带动">
-        <span>氛围带动</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="点歌偏好">
-        <span>点歌偏好</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="情绪支持">
-        <span>情绪支持</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="预算敏感">
-        <span>预算敏感</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="新进观望">
-        <span>新进观望</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="潜水守候">
-        <span>潜水守候</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="目的用户">
-        <span>目的用户</span>
-      </label>
-    </div>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="高额支持">
+                <span>高额支持</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="稳定陪伴">
+                <span>稳定陪伴</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="氛围带动">
+                <span>氛围带动</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="点歌偏好">
+                <span>点歌偏好</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="情绪支持">
+                <span>情绪支持</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="预算敏感">
+                <span>预算敏感</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="新进观望">
+                <span>新进观望</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="潜水守候">
+                <span>潜水守候</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="目的用户">
+                <span>目的用户</span>
+              </label>
+            </div>
+            <label class="field-label" for="customTags">自定义标签</label>
+            <input id="customTags" type="text" placeholder="多个标签用顿号或逗号分隔，如：生日快到、喜欢粤语歌">
             <p class="form-error" id="tagsError"></p>
           </div>
           <div class="form-field full">
@@ -437,14 +431,6 @@
             <input id="amount" type="number" min="0" step="0.01" value="0">
           </div>
           <div class="form-field">
-            <label class="field-label" for="totalLiveCount">统计周期直播场次</label>
-            <input id="totalLiveCount" type="number" min="0" step="1" value="0">
-          </div>
-          <div class="form-field">
-            <label class="field-label" for="appearedCount">出现次数</label>
-            <input id="appearedCount" type="number" min="0" step="1" value="0">
-          </div>
-          <div class="form-field">
             <label class="field-label" for="supportedCount">支持次数</label>
             <input id="supportedCount" type="number" min="0" step="1" value="0">
           </div>
@@ -455,6 +441,10 @@
           <div class="form-field">
             <label class="field-label" for="highSingleSpendCount">单笔 &gt;1000 次数</label>
             <input id="highSingleSpendCount" type="number" min="0" step="1" value="0">
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="maxSingleSpendAmount">单笔最高消费（元）</label>
+            <input id="maxSingleSpendAmount" type="number" min="0" step="0.01" value="0">
           </div>
           <div class="form-field">
             <label class="field-label" for="lastInteraction">最近互动时间</label>
@@ -571,6 +561,9 @@
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260826-auth-stats"></script>
   <script src="./app.js?v=20260826-auth-stats"></script>
+
+
+
 
 
 
