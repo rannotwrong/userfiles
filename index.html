@@ -358,8 +358,8 @@
             <input id="level" type="text" placeholder="如：金卡会员 / 新用户">
           </div>
           <div class="form-field">
-            <label class="field-label" for="tier">当前分层（保存后自动重算）</label>
-            <select id="tier" disabled="">
+            <label class="field-label" for="tier">当前分层（人工优先）</label>
+            <select id="tier">
               <option value="S">S · 最高价值用户</option>
               <option value="A">A · 核心用户</option>
               <option value="B">B · 高潜用户</option>
@@ -480,7 +480,7 @@
                 <span>只占榜和聊天</span>
               </label>
             </div>
-            <p class="hint">保存后会按规则自动计算分层和标签，手动选择的标签会作为补充保留。</p>
+            <p class="hint">新增或编辑档案时以你选择的分层为准；后续新增直播互动时，系统才会按规则重新判定分层和标签。</p>
           </div>
           <div class="form-field full">
             <label class="field-label" for="maintenance">维护方式</label>
@@ -571,6 +571,7 @@
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260826-auth-stats"></script>
   <script src="./app.js?v=20260826-auth-stats"></script>
+
 
 
 

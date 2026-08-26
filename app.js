@@ -112,16 +112,30 @@
     return dedupe(tags);
   }
 
-  function normalizeUser(user) {
+  function normalizeUser(user, options = {}) {
+    const savedSnapshot = user.taggingSnapshot && typeof user.taggingSnapshot === "object" ? user.taggingSnapshot : {};
+    const { recalculateTier = false, tierSource = user.tierSource || savedSnapshot.tierSource } = options;
     const manualTags = Array.isArray(user.manualTags)
       ? user.manualTags
       : (Array.isArray(user.tags) ? user.tags.filter((tag) => !AUTO_TAGS.includes(tag)) : []);
     const metrics = getUserMetrics(user);
     const classification = classifyTier(metrics);
     const autoTags = inferAutoTags(user, metrics);
+    const finalTier = recalculateTier
+      ? classification.tier
+      : (user.tier || classification.tier);
+    const finalTierSource = recalculateTier ? "system" : (tierSource || user.tierSource || savedSnapshot.tierSource || "manual");
+    const matchedRules = recalculateTier
+      ? [classification.rule]
+      : [
+        `人工设定：${finalTier}级`,
+        `系统参考：${classification.rule}`
+      ];
     return {
       ...user,
-      tier: classification.tier,
+      tier: finalTier,
+      tierSource: finalTierSource,
+      systemTier: classification.tier,
       manualTags,
       autoTags,
       tags: dedupe([...autoTags, ...manualTags]),
@@ -137,14 +151,19 @@
       isNoPurpose: metrics.isNoPurpose,
       hasOfflineMealRequest: metrics.hasOfflineMealRequest,
       isOnlyRankAndChat: metrics.isOnlyRankAndChat,
-      matchedRules: [classification.rule],
-      taggingSnapshot: metrics
+      matchedRules,
+      taggingSnapshot: {
+        ...metrics,
+        tierSource: finalTierSource,
+        systemTier: classification.tier,
+        effectiveTier: finalTier
+      }
     };
   }
 
-  async function persistUser(user, oldTier = null) {
+  async function persistUser(user, oldTier = null, operatorType = user.tierSource || "manual") {
     if (state.cloudEnabled && state.currentUser) {
-      return await cloudStore.saveUser(user, oldTier);
+      return await cloudStore.saveUser(user, oldTier, operatorType);
     }
     saveLocalUsers();
     return user;
@@ -554,6 +573,7 @@
       ["近期事件", user.recentEvent || "未记录"],
       ["聊过的话题", user.topics || "未记录"],
       ["消费情况", `累计 ¥ ${Number(user.amount || 0).toLocaleString("zh-CN")}`],
+      ["分层来源", user.tierSource === "system" ? "系统根据直播互动自动判定" : "人工设定"],
       ["支持率", `${formatPercent(user.supportRate || 0)}（支持 ${user.supportedCount || 0} / 直播 ${user.totalLiveCount || 0}）`],
       ["单次消费", `最近 ¥ ${Number(user.latestSingleSpendAmount || 0).toLocaleString("zh-CN")}；单笔 >1000 次数 ${user.highSingleSpendCount || 0}`],
       ["行为字段", [
@@ -725,6 +745,7 @@
       const draft = normalizeUser({
         id: state.cloudEnabled && state.currentUser ? "" : uid(),
         ...result.data,
+        tierSource: "system",
         createdAt: now,
         lastInteraction: now,
         interactions: [{
@@ -737,9 +758,9 @@
           hasOfflineMealRequest: Boolean(result.data.hasOfflineMealRequest),
           isOnlyRankAndChat: Boolean(result.data.isOnlyRankAndChat)
         }]
-      });
-      const saved = await persistUser(draft, draft.tier);
-      state.users.unshift(normalizeUser(saved));
+      }, { recalculateTier: true, tierSource: "system" });
+      const saved = await persistUser(draft, null, "system");
+      state.users.unshift(normalizeUser(saved, { recalculateTier: true, tierSource: "system" }));
       if (!state.cloudEnabled) saveLocalUsers();
       resetImport();
       state.activeTier = "全部";
@@ -879,6 +900,7 @@
       const id = $("#userId").value;
       const existing = state.users.find((user) => user.id === id);
       const manualTags = $$('input[name="tags"]:checked').map((input) => input.value);
+      const manualTier = $("#tier").value || existing?.tier || "C";
       const submitButton = $("#userForm .primary-btn[type='submit']");
       submitButton.disabled = true;
       submitButton.textContent = "保存中…";
@@ -887,6 +909,8 @@
         id: id || (state.cloudEnabled && state.currentUser ? "" : uid()),
         nickname,
         level: $("#level").value.trim(),
+        tier: manualTier,
+        tierSource: "manual",
         manualTags,
         occupation: $("#occupation").value.trim(),
         interests: $("#interests").value.trim(),
@@ -908,7 +932,7 @@
         interactions: existing?.interactions || []
       });
       try {
-        const saved = await persistUser(user, existing?.tier || user.tier);
+        const saved = await persistUser(user, existing?.tier || null, "manual");
         const normalized = normalizeUser(saved);
         state.users = existing
           ? state.users.map((item) => item.id === id ? normalized : item)
@@ -916,7 +940,7 @@
         if (!state.cloudEnabled) saveLocalUsers();
         $("#userDialog").close();
         renderUsers();
-        showToast(`${existing ? "档案已更新" : "新用户已收进记录本"}，自动判为 ${normalized.tier} 级`);
+        showToast(`${existing ? "档案已更新" : "新用户已收进记录本"}，当前为 ${normalized.tier} 级`);
       } catch (error) {
         console.warn("保存档案失败。", error);
         showToast(error.message || "保存失败，请稍后重试");
@@ -947,6 +971,7 @@
       };
       const updated = normalizeUser({
         ...user,
+        tierSource: "system",
         lastInteraction: now,
         amount: Number(user.amount || 0) + spendAmount,
         totalLiveCount: Math.max(Number($("#interactionTotalLive").value || 0), Number(user.totalLiveCount || 0)),
@@ -963,7 +988,7 @@
           interaction,
           ...(user.interactions || [])
         ]
-      });
+      }, { recalculateTier: true, tierSource: "system" });
       const submitButton = $("#interactionForm .primary-btn[type='submit']");
       submitButton.disabled = true;
       submitButton.textContent = "保存中…";
@@ -971,7 +996,7 @@
         let savedUser = updated;
         if (state.cloudEnabled && state.currentUser) {
           const result = await cloudStore.addInteraction(user, interaction, updated);
-          savedUser = normalizeUser(result.user);
+          savedUser = normalizeUser(result.user, { recalculateTier: true, tierSource: "system" });
         } else {
           saveLocalUsers();
         }

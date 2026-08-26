@@ -46,7 +46,12 @@
       has_offline_meal_request: Boolean(user.hasOfflineMealRequest),
       is_only_rank_and_chat: Boolean(user.isOnlyRankAndChat),
       matched_rules: toArray(user.matchedRules),
-      tagging_snapshot: user.taggingSnapshot || {},
+      tagging_snapshot: {
+        ...(user.taggingSnapshot || {}),
+        tierSource: user.tierSource || user.taggingSnapshot?.tierSource || "manual",
+        systemTier: user.systemTier || user.taggingSnapshot?.systemTier || user.tier || "C",
+        effectiveTier: user.tier || "C"
+      },
       last_interaction_at: user.lastInteraction || null,
       created_at: user.createdAt || new Date().toISOString()
     };
@@ -80,6 +85,8 @@
       isOnlyRankAndChat: Boolean(row.is_only_rank_and_chat),
       matchedRules: toArray(row.matched_rules),
       taggingSnapshot: row.tagging_snapshot || {},
+      tierSource: row.tagging_snapshot?.tierSource || "manual",
+      systemTier: row.tagging_snapshot?.systemTier || row.tier || "C",
       createdAt: row.created_at,
       lastInteraction: row.last_interaction_at,
       interactions
@@ -221,7 +228,7 @@
     return users.map((user) => fromDbUser(user, grouped.get(user.id) || []));
   }
 
-  async function saveUser(user, oldTier = null) {
+  async function saveUser(user, oldTier = null, operatorType = user.tierSource || "manual") {
     const session = await requireSession();
     const payload = toDbUser(user, session.user.id);
     let saved;
@@ -254,7 +261,7 @@
       if (error) throw error;
     }
 
-    await writeTaggingLog(saved.id, oldTier, user);
+    await writeTaggingLog(saved.id, oldTier, user, operatorType);
     return fromDbUser(saved, user.interactions || []);
   }
 
@@ -273,23 +280,29 @@
       .single();
     if (error) throw error;
 
-    const savedUser = await saveUser(updatedUser, user.tier);
+    const savedUser = await saveUser(updatedUser, user.tier, "system");
     return {
       user: savedUser,
       interaction: fromDbInteraction(data)
     };
   }
 
-  async function writeTaggingLog(userId, oldTier, user) {
+  async function writeTaggingLog(userId, oldTier, user, operatorType = user.tierSource || "manual") {
     const session = await requireSession();
+    const safeOperatorType = operatorType === "system" ? "system" : "manual";
     const { error } = await client.from("user_tagging_logs").insert({
       owner_id: session.user.id,
       audience_user_id: userId,
-      old_tier: oldTier || user.tier || null,
+      old_tier: oldTier || null,
       new_tier: user.tier || null,
       matched_rules: toArray(user.matchedRules),
-      calculated_snapshot: user.taggingSnapshot || {},
-      operator_type: "system"
+      calculated_snapshot: {
+        ...(user.taggingSnapshot || {}),
+        tierSource: safeOperatorType,
+        systemTier: user.systemTier || user.taggingSnapshot?.systemTier || user.tier || "C",
+        effectiveTier: user.tier || "C"
+      },
+      operator_type: safeOperatorType
     });
     if (error) console.warn("打标日志写入失败。", error);
   }
