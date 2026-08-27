@@ -39,6 +39,7 @@
     const hasOfflineMealRequest = /线下|吃饭|见面|私下|越界/.test(cleaned);
     const isWillingToReply = /愿意接话|接话|暖场|抛梗|聊天积极|主动聊天/.test(cleaned);
     const isOnlyRankAndChat = /只占榜|占榜和聊天|只聊天|不消费/.test(cleaned);
+    const liveSummary = parseLiveSummary(cleaned);
 
     return {
       nickname: nickname || "待确认用户",
@@ -60,7 +61,31 @@
       isNoPurpose: !hasOfflineMealRequest,
       hasOfflineMealRequest,
       isOnlyRankAndChat,
-      maintenance: "根据本次直播记录择期回访。"
+      maintenance: "根据本次直播记录择期回访。",
+      liveSummary
+    };
+  }
+
+  function parseLiveSummary(text) {
+    const cleaned = String(text || "");
+    const dateMatch = cleaned.match(/(?:日期|时间|直播日期)\s*[:：]?\s*(\d{4}[-/.年]\d{1,2}[-/.月]\d{1,2})/);
+    const revenueMatch = cleaned.match(/(?:总收入|本场收入|直播收入|收入)\s*[:：]?\s*[¥￥]?\s*(\d+(?:\.\d{1,2})?)/);
+    const giftUsersMatch = cleaned.match(/(?:送礼人数|支持人数|送礼用户)\s*[:：]?\s*(\d+)/);
+    const newGiftUsersMatch = cleaned.match(/(?:新用户送礼人数|新送礼用户|新用户支持人数)\s*[:：]?\s*(\d+)/);
+    const topGiftMatch = cleaned.match(/(?:最高价值礼物|最高礼物|最高价值)\s*[:：]?\s*([^，,。\n；;]{1,24})/);
+    const scoreMatch = cleaned.match(/(?:评分|直播评分|场次评分)\s*[:：]?\s*(\d+(?:\.\d{1,2})?)/);
+    const normalizeDate = (value) => {
+      if (!value) return "";
+      const parts = value.replace(/[年月/.]/g, "-").replace(/日/g, "").split("-").map((item) => item.padStart(2, "0"));
+      return parts.length >= 3 ? `${parts[0]}-${parts[1]}-${parts[2]}` : "";
+    };
+    return {
+      date: normalizeDate(dateMatch?.[1]),
+      revenue: Number(revenueMatch?.[1] || 0),
+      giftUsers: Number(giftUsersMatch?.[1] || 0),
+      newGiftUsers: Number(newGiftUsersMatch?.[1] || 0),
+      topGift: topGiftMatch?.[1]?.trim() || "",
+      score: Number(scoreMatch?.[1] || 0)
     };
   }
 
@@ -80,10 +105,20 @@
         onProgress?.(progress);
       }
       const baseName = file.name.replace(/\.[^.]+$/, "").slice(0, 12);
+      const today = new Date().toISOString().slice(0, 10);
+      const summary = {
+        date: today,
+        revenue: 12860,
+        giftUsers: 42,
+        newGiftUsers: 18,
+        topGift: "嘉年华",
+        score: 92
+      };
       return {
         code: 0,
         data: {
-          text: `昵称：${baseName || "直播用户"}\n支持率：35%\n总消费金额：5600\n单次消费：600\n出现次数：4\n愿意接话，直播间聊天积极`,
+          text: `日期：${summary.date}\n本场总收入：${summary.revenue}\n送礼人数：${summary.giftUsers}\n新用户送礼人数：${summary.newGiftUsers}\n最高价值礼物：${summary.topGift}\n评分：${summary.score}\n昵称：${baseName || "直播用户"}\n支持率：35%\n总消费金额：5600\n单次消费：600\n出现次数：4\n愿意接话，直播间聊天积极`,
+          summary,
           confidence: 0.91
         }
       };

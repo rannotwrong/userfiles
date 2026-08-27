@@ -14,7 +14,7 @@
     <header class="topbar reveal reveal-1">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">
-          <img class="brand-logo" src="./logo.jpeg?v=20260827-logo" alt="">
+          <img class="brand-logo" src="./logo.jpeg?v=20260827-logo" alt="" style="width: 62.2344px; height: 56.9688px; transform: matrix(1, 0, 0, 1, -3.92969, -4.92969);">
         </div>
         <div>
           <p class="eyebrow">USER ATLAS</p>
@@ -87,17 +87,17 @@
       </section>
 
       <nav class="view-tabs reveal reveal-3" aria-label="页面切换">
-        <button class="view-tab" type="button" data-view-target="profiles" aria-pressed="false">
+        <button class="view-tab" type="button" data-view-target="profiles" aria-pressed="true">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"></path><path d="M3 6h.01M3 12h.01M3 18h.01"></path></svg>
           用户档案
         </button>
-        <button class="view-tab" type="button" data-view-target="live" aria-pressed="true">
+        <button class="view-tab" type="button" data-view-target="live" aria-pressed="false">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"></path><path d="m7 15 4-4 3 3 5-7"></path></svg>
           直播趋势
         </button>
       </nav>
 
-      <section class="workspace reveal reveal-3" data-view="profiles" hidden="">
+      <section class="workspace reveal reveal-3" data-view="profiles">
         <div class="toolbar">
           <div class="search-wrap">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
@@ -144,25 +144,50 @@
             </div>
             <span class="hand-note">智能录入</span>
           </div>
+          <label class="dropzone" id="dropzone">
+            <input id="imageInput" type="file" accept="image/*">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
+            <strong>上传聊天或直播截图</strong>
+            <small>点击选择或拖拽图片</small>
+          </label>
+          <div class="capture-result-grid" aria-label="直播识别结果">
+            <label class="capture-field">
+              <span>日期</span>
+              <input id="captureDate" type="date">
+            </label>
+            <label class="capture-field">
+              <span>总收入</span>
+              <input id="captureRevenue" type="number" min="0" step="0.01" value="0">
+            </label>
+            <label class="capture-field">
+              <span>送礼人数</span>
+              <input id="captureGiftUsers" type="number" min="0" step="1" value="0">
+            </label>
+            <label class="capture-field">
+              <span>新用户送礼人数</span>
+              <input id="captureNewGiftUsers" type="number" min="0" step="1" value="0">
+            </label>
+            <label class="capture-field full">
+              <span>最高价值礼物</span>
+              <input id="captureTopGift" type="text" placeholder="如：嘉年华 / 守护礼盒">
+            </label>
+            <label class="capture-field">
+              <span>评分</span>
+              <input id="captureScore" type="number" min="0" max="100" step="1" value="0">
+            </label>
+          </div>
+          <div class="image-preview-wrap" id="previewWrap" hidden="">
+            <img id="imagePreview" alt="待识别图片预览">
+            <span id="imageName"></span>
+          </div>
+          <div class="progress" id="recognizeProgress" hidden="" aria-label="图片识别进度">
+            <span id="progressBar"></span>
+          </div>
           <div class="input-stack">
             <div>
-              <label class="field-label" for="liveText">直播文字或用户描述</label>
+              <label class="field-label" for="liveText">可文字描述</label>
               <textarea id="liveText" placeholder="例如：小满，支持率 35%，总消费金额 5600，单次消费 600，愿意接话，直播间聊天积极…"></textarea>
             </div>
-            <label class="dropzone" id="dropzone">
-              <input id="imageInput" type="file" accept="image/*">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
-              <strong>上传聊天或直播截图</strong>
-              <small>点击选择或拖拽图片</small>
-            </label>
-            <div class="image-preview-wrap" id="previewWrap" hidden="">
-              <img id="imagePreview" alt="待识别图片预览">
-              <span id="imageName"></span>
-            </div>
-            <div class="progress" id="recognizeProgress" hidden="" aria-label="图片识别进度">
-              <span id="progressBar"></span>
-            </div>
-            <p class="hint" id="importHint">原型会模拟识别图片文字，结果可在记录前编辑。</p>
             <div class="import-actions">
               <button class="secondary-btn" id="recognizeBtn" type="button">识别图片</button>
               <button class="primary-btn" id="parseBtn" type="button">解析并记录</button>
@@ -171,7 +196,7 @@
         </aside>
       </section>
 
-      <section class="trend-page reveal reveal-3" data-view="live" aria-labelledby="trendTitle">
+      <section class="trend-page reveal reveal-3" data-view="live" aria-labelledby="trendTitle" hidden="">
         <div class="trend-head">
           <div>
             <p class="section-kicker">LIVE ANALYTICS</p>
@@ -222,7 +247,7 @@
       <article class="metric-card">
         <span>日收入</span>
         <strong>¥12,860</strong>
-        <small>今日直播成交</small>
+        <small>2026-08-27 直播成交</small>
       </article>
       <article class="metric-card">
         <span>支持用户数</span>
@@ -235,7 +260,7 @@
         <small>首次完成支持</small>
       </article>
       <article class="metric-card">
-        <span>S级用户付费率</span>
+        <span>S级用户支持率</span>
         <strong>46%</strong>
         <small>S级用户收入 / 总收入</small>
       </article>
@@ -262,12 +287,12 @@
       <article class="metric-card">
         <span>周收入</span>
         <strong>¥76,420</strong>
-        <small>本周累计</small>
+        <small>所选周累计</small>
       </article>
       <article class="metric-card">
         <span>新增潜力用户数</span>
         <strong>136 人</strong>
-        <small>本周新增</small>
+        <small>所选周新增</small>
       </article></div>
             <div class="chart-card">
               <div class="chart-title">
@@ -327,12 +352,12 @@
       <article class="metric-card">
         <span>月收入</span>
         <strong>¥318,900</strong>
-        <small>本月累计</small>
+        <small>所选月累计</small>
       </article>
       <article class="metric-card">
         <span>新增潜力用户数</span>
         <strong>528 人</strong>
-        <small>本月新增</small>
+        <small>所选月新增</small>
       </article></div>
             <div class="chart-card">
               <div class="chart-title">
@@ -599,6 +624,8 @@
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260826-auth-stats"></script>
   <script src="./app.js?v=20260826-auth-stats"></script>
+
+
 
 
 

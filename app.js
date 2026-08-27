@@ -880,6 +880,12 @@
 
   function resetImport() {
     $("#liveText").value = "";
+    $("#captureDate").value = toDateKey(new Date());
+    $("#captureRevenue").value = 0;
+    $("#captureGiftUsers").value = 0;
+    $("#captureNewGiftUsers").value = 0;
+    $("#captureTopGift").value = "";
+    $("#captureScore").value = 0;
     $("#imageInput").value = "";
     $("#previewWrap").hidden = true;
     $("#recognizeProgress").hidden = true;
@@ -887,6 +893,52 @@
     if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
     state.previewUrl = "";
     state.selectedImage = null;
+  }
+
+  function setImportStatus(message) {
+    const hint = $("#importHint");
+    if (hint) hint.textContent = message;
+  }
+
+  function collectCaptureSummary() {
+    return {
+      date: $("#captureDate").value || toDateKey(new Date()),
+      revenue: toNumber($("#captureRevenue").value),
+      giftUsers: toNumber($("#captureGiftUsers").value),
+      newGiftUsers: toNumber($("#captureNewGiftUsers").value),
+      topGift: $("#captureTopGift").value.trim(),
+      score: toNumber($("#captureScore").value)
+    };
+  }
+
+  function fillCaptureSummary(summary = {}, { onlyEmpty = false } = {}) {
+    const fields = [
+      ["captureDate", summary.date],
+      ["captureRevenue", summary.revenue],
+      ["captureGiftUsers", summary.giftUsers],
+      ["captureNewGiftUsers", summary.newGiftUsers],
+      ["captureTopGift", summary.topGift],
+      ["captureScore", summary.score]
+    ];
+    fields.forEach(([id, value]) => {
+      if (value === undefined || value === null || value === "") return;
+      const input = $(`#${id}`);
+      if (onlyEmpty && input.value && Number(input.value) !== 0) return;
+      input.value = value;
+    });
+  }
+
+  function captureSummaryToText(summary = collectCaptureSummary()) {
+    const hasLiveData = summary.revenue || summary.giftUsers || summary.newGiftUsers || summary.topGift || summary.score;
+    if (!hasLiveData) return "";
+    return [
+      summary.date ? `日期：${summary.date}` : "",
+      summary.revenue ? `本场总收入：${summary.revenue}` : "",
+      summary.giftUsers ? `送礼人数：${summary.giftUsers}` : "",
+      summary.newGiftUsers ? `新用户送礼人数：${summary.newGiftUsers}` : "",
+      summary.topGift ? `最高价值礼物：${summary.topGift}` : "",
+      summary.score ? `评分：${summary.score}` : ""
+    ].filter(Boolean).join("\n");
   }
 
   function setSelectedImage(file) {
@@ -900,7 +952,7 @@
     $("#imagePreview").src = state.previewUrl;
     $("#imageName").textContent = file.name;
     $("#previewWrap").hidden = false;
-    $("#importHint").textContent = "图片只在当前页面本地预览，不会上传。";
+    setImportStatus("图片只在当前页面本地预览，不会上传。");
   }
 
   async function recognizeImage() {
@@ -914,7 +966,7 @@
     button.textContent = "识别中…";
     progress.hidden = false;
     $("#progressBar").style.width = "4%";
-    $("#importHint").textContent = "正在模拟识别图片文字…";
+    setImportStatus("正在模拟识别图片文字…");
 
     try {
       const result = await window.NotebookAPI.recognizeLiveImage(state.selectedImage, (value) => {
@@ -922,10 +974,11 @@
       });
       const current = $("#liveText").value.trim();
       $("#liveText").value = [current, result.data.text].filter(Boolean).join("\n");
-      $("#importHint").textContent = `识别完成，模拟置信度 ${Math.round(result.data.confidence * 100)}%。请检查文字后记录。`;
+      fillCaptureSummary(result.data.summary || {});
+      setImportStatus(`识别完成，模拟置信度 ${Math.round(result.data.confidence * 100)}%。请检查文字后记录。`);
       showToast("图片文字已识别");
     } catch (error) {
-      $("#importHint").textContent = error.message || "图片识别失败，请改用文字录入。";
+      setImportStatus(error.message || "图片识别失败，请改用文字录入。");
       showToast("图片识别失败");
     } finally {
       button.disabled = false;
@@ -943,20 +996,22 @@
       $("#authEmail").focus();
       return;
     }
-    const text = $("#liveText").value.trim();
+    const descriptionText = $("#liveText").value.trim();
+    const text = [descriptionText, captureSummaryToText()].filter(Boolean).join("\n");
     if (!text) {
-      showToast("请先填写文字或识别图片");
+      showToast("请先填写文字、识别图片或补充直播数据");
       $("#liveText").focus();
       return;
     }
     const button = $("#parseBtn");
     button.disabled = true;
     button.textContent = "解析中…";
-    $("#importHint").textContent = "正在提取昵称、分层、标签与消费信息…";
+    setImportStatus("正在提取昵称、分层、标签与消费信息…");
 
     try {
       const result = await window.NotebookAPI.parseLiveText(text);
       if (result.code !== 0) throw new Error(result.message);
+      fillCaptureSummary(result.data.liveSummary || {}, { onlyEmpty: true });
       const now = new Date().toISOString();
       const draft = normalizeUser({
         id: state.cloudEnabled && state.currentUser ? "" : uid(),
@@ -984,10 +1039,10 @@
         item.setAttribute("aria-pressed", String(item.dataset.tier === "全部"));
       });
       renderUsers();
-      $("#importHint").textContent = "已自动归档，可打开用户详情继续完善。";
+      setImportStatus("已自动归档，可打开用户详情继续完善。");
       showToast(`已记录用户“${draft.nickname}”，自动判为 ${draft.tier} 级`);
     } catch (error) {
-      $("#importHint").textContent = error.message || "解析失败，请检查文字后重试。";
+      setImportStatus(error.message || "解析失败，请检查文字后重试。");
       showToast("直播记录解析失败");
     } finally {
       button.disabled = false;
@@ -1281,6 +1336,7 @@
 
   async function init() {
     buildTagOptions();
+    $("#captureDate").value = toDateKey(new Date());
     bindEvents();
     renderAuthPanel();
     switchView(state.activeView);
