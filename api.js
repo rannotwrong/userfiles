@@ -1,5 +1,43 @@
 (function () {
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const config = window.UserAtlasSupabaseConfig || {};
+  const proxyBaseUrl = String(config.aiProxyUrl || "").replace(/\/$/, "");
+  const proxyToken = String(config.aiProxyToken || "");
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("图片读取失败"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function splitDataUrl(dataUrl) {
+    const match = String(dataUrl || "").match(/^data:([^;]+);base64,(.+)$/);
+    return {
+      mimeType: match?.[1] || "image/png",
+      imageBase64: match?.[2] || ""
+    };
+  }
+
+  async function requestProxy(path, payload) {
+    if (!proxyBaseUrl) return null;
+    const headers = {
+      "Content-Type": "application/json"
+    };
+    if (proxyToken) headers["x-ocr-proxy-token"] = proxyToken;
+    const response = await fetch(`${proxyBaseUrl}${path}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.code !== 0) {
+      throw new Error(result.message || "图片识别服务暂不可用");
+    }
+    return result;
+  }
 
   function parseText(text) {
     const cleaned = String(text || "").replace(/\r/g, "").trim();
@@ -90,18 +128,25 @@
   }
 
   window.NotebookAPI = {
-    /**
-     * TODO: 替换为 POST /api/live-records/recognize
-     * 请求：multipart/form-data { image }
-     * 响应：{ code: 0, data: { text, confidence } }
-     * 当前仅根据文件名返回可编辑的演示识别结果，不上传文件。
-     */
     async recognizeLiveImage(file, onProgress) {
       if (!file || !file.type.startsWith("image/")) {
         throw new Error("请选择图片文件");
       }
-      for (const progress of [12, 28, 49, 72, 91, 100]) {
-        await delay(160);
+      onProgress?.(8);
+      const dataUrl = await fileToDataUrl(file);
+      const { mimeType, imageBase64 } = splitDataUrl(dataUrl);
+      onProgress?.(28);
+      if (proxyBaseUrl) {
+        const result = await requestProxy("/api/live-records/recognize-image", {
+          imageBase64,
+          mimeType,
+          text: ""
+        });
+        onProgress?.(100);
+        return result;
+      }
+      for (const progress of [42, 68, 100]) {
+        await delay(120);
         onProgress?.(progress);
       }
       const today = new Date().toISOString().slice(0, 10);
@@ -116,7 +161,7 @@
       return {
         code: 0,
         data: {
-          text: `日期：${summary.date}\n图片已上传，待接入正式 OCR 后自动识别文字。`,
+          text: `日期：${summary.date}\n图片已上传。当前未配置豆包 OCR 代理，请手动补充字段。`,
           summary,
           confidence: 0
         }

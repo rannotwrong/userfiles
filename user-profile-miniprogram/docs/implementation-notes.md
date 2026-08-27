@@ -51,7 +51,7 @@
 - 用户档案编辑接口：`PATCH /api/audience-users/:id`。
 - 直播记录列表接口：`GET /api/live-records`。
 - 直播记录保存接口：`POST /api/live-records`。
-- 直播记录 OCR 占位接口：`POST /api/live-records/ocr`。
+- 直播记录 OCR 接口：`POST /api/live-records/ocr`，支持文字解析和豆包图片识别。
 - 小程序端用户档案和直播记录 API 封装。
 - 小程序首页页面层：
   - 用户档案列表。
@@ -64,7 +64,6 @@
 
 尚未完成：
 
-- 豆包 OCR 真实接口调用。
 - 趋势统计接口。
 - 与当前网页版数据的完全打通。
 - 更细的用户详情页、历史直播记录页。
@@ -80,6 +79,6 @@ PATCH /api/audience-users/:id
 POST /api/live-records/ocr
 ```
 
-以上接口和首页页面层已经补齐。下一步建议把豆包 OCR 接入 `POST /api/live-records/ocr`，再补“用户详情页”和“历史直播记录页”。
+以上接口和首页页面层已经补齐，`POST /api/live-records/ocr` 已接入豆包图片识别。下一步建议继续补“用户详情页”和“历史直播记录页”。
 
-其中 `POST /api/live-records/ocr` 当前是占位实现：能根据文字描述提取日期、总收入、送礼人数、新用户送礼人数、最高价值礼物、评分；如果传入 `imageBase64`，接口会保留图片接入位置，但还不会真正调用豆包。接入豆包时，只需要在该接口内部替换 OCR provider，不需要改小程序前端调用方式。
+其中 `POST /api/live-records/ocr` 的行为是：仅传文字时走本地解析；传入 `imageBase64` 时由服务端读取 `ARK_API_KEY` 或 `DOUBAO_API_KEY` 调用豆包视觉模型，返回 `ocrText`、结构化 `fields`、`provider`、`confidence` 和 `recognitionPayload`。小程序端保存直播记录时会把识别 payload 一并写入 `wechat_live_records.recognition_payload`，形成“图片解读 → 数据上传 → 数据更新”的闭环。

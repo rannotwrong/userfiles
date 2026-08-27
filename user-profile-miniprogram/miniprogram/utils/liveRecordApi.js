@@ -10,13 +10,14 @@ function listLiveRecords(params = {}) {
   });
 }
 
-function recognizeLiveRecord({ text = "", imageBase64 = "" } = {}) {
+function recognizeLiveRecord({ text = "", imageBase64 = "", mimeType = "image/png" } = {}) {
   return api.request({
     url: "/api/live-records/ocr",
     method: "POST",
     data: {
       text,
-      imageBase64
+      imageBase64,
+      mimeType
     }
   });
 }
@@ -48,7 +49,8 @@ async function recognizeImageFile(filePath, text = "") {
   const imageBase64 = await fileToBase64(filePath);
   return recognizeLiveRecord({
     text,
-    imageBase64
+    imageBase64,
+    mimeType: "image/png"
   });
 }
 

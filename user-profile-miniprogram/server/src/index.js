@@ -16,12 +16,13 @@ import {
   toDbLiveRecord,
   validateLiveRecord
 } from "./liveRecords.js";
+import { recognizeLiveRecordImageWithDoubao } from "./doubaoVision.js";
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
 
 app.use(cors());
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "14mb" }));
 
 function publicUser(row) {
   return {
@@ -257,16 +258,31 @@ app.get("/api/live-records", requireSession, async (req, res) => {
 
 app.post("/api/live-records/ocr", requireSession, async (req, res) => {
   try {
-    const { text = "", imageBase64 = "" } = req.body || {};
+    const { text = "", imageBase64 = "", mimeType = "image/png" } = req.body || {};
+
+    if (imageBase64) {
+      const recognition = await recognizeLiveRecordImageWithDoubao({
+        imageBase64,
+        mimeType,
+        text
+      });
+      res.json({
+        ...recognition,
+        message: "已通过豆包识别图片并提取直播记录。"
+      });
+      return;
+    }
+
     const parsed = parseLiveRecordText(text);
 
     res.json({
       ocrText: text,
       fields: parsed,
-      provider: imageBase64 ? "placeholder" : "text-parser",
-      message: imageBase64
-        ? "已收到图片。当前为 OCR 代理占位，接入豆包后会返回真实识别文字。"
-        : "已根据文字描述提取关键信息。"
+      provider: "text-parser",
+      recognitionPayload: {
+        provider: "text-parser"
+      },
+      message: "已根据文字描述提取关键信息。"
     });
   } catch (error) {
     res.status(500).json({ message: error.message || "识别直播记录失败" });

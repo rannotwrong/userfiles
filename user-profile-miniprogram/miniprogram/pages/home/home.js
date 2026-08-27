@@ -14,6 +14,10 @@ function today() {
   return `${year}-${month}-${day}`;
 }
 
+function isTodayDate(value) {
+  return String(value || "").slice(0, 10) === today();
+}
+
 function emptyProfileDraft() {
   return {
     id: "",
@@ -40,7 +44,8 @@ function emptyCaptureDraft() {
     topGift: "",
     score: "",
     sourceText: "",
-    ocrText: ""
+    ocrText: "",
+    recognitionPayload: {}
   };
 }
 
@@ -95,6 +100,7 @@ Page({
     profileTierIndex: 3,
     keyword: "",
     users: [],
+    liveRecords: [],
     stats: {
       total: 0,
       sCount: 0,
@@ -113,7 +119,10 @@ Page({
       const session = await auth.loginWithWechat();
       getApp().globalData.user = session.user;
       this.setData({ user: session.user });
-      await this.loadAudienceUsers();
+      await Promise.all([
+        this.loadAudienceUsers(),
+        this.loadLiveRecords()
+      ]);
     } catch (error) {
       auth.clearSession();
       wx.redirectTo({ url: "/pages/login/login" });
@@ -123,7 +132,10 @@ Page({
   },
 
   async onPullDownRefresh() {
-    await this.loadAudienceUsers();
+    await Promise.all([
+      this.loadAudienceUsers(),
+      this.loadLiveRecords()
+    ]);
     wx.stopPullDownRefresh();
   },
 
@@ -140,12 +152,12 @@ Page({
     };
   },
 
-  computeStats(users) {
+  computeStats(users, liveRecords = this.data.liveRecords) {
     return {
       total: users.length,
       sCount: users.filter((user) => user.tier === "S").length,
       aCount: users.filter((user) => user.tier === "A").length,
-      todayRecords: 0
+      todayRecords: liveRecords.filter((record) => isTodayDate(record.date)).length
     };
   },
 
@@ -165,6 +177,22 @@ Page({
       });
     } finally {
       this.setData({ isLoading: false });
+    }
+  },
+
+  async loadLiveRecords() {
+    try {
+      const result = await liveRecordApi.listLiveRecords();
+      const liveRecords = result.records || [];
+      this.setData({
+        liveRecords,
+        stats: this.computeStats(this.data.users, liveRecords)
+      });
+    } catch (error) {
+      wx.showToast({
+        title: error.message || "读取直播记录失败",
+        icon: "none"
+      });
     }
   },
 
@@ -367,7 +395,12 @@ Page({
         newGiftUserCount: fields.newGiftUserCount || this.data.captureDraft.newGiftUserCount,
         topGift: fields.topGift || this.data.captureDraft.topGift,
         score: fields.score || this.data.captureDraft.score,
-        ocrText: recognition.ocrText || this.data.captureDraft.ocrText
+        ocrText: recognition.ocrText || this.data.captureDraft.ocrText,
+        recognitionPayload: {
+          provider: recognition.provider || "unknown",
+          confidence: recognition.confidence || 0,
+          ...(recognition.recognitionPayload || {})
+        }
       }
     });
   },
@@ -386,7 +419,8 @@ Page({
         sourceText: draft.sourceText,
         ocrText: draft.ocrText,
         recognitionPayload: {
-          selectedImageName: this.data.selectedImageName
+          selectedImageName: this.data.selectedImageName,
+          ...(draft.recognitionPayload || {})
         }
       });
       wx.showToast({ title: "直播记录已保存", icon: "success" });
@@ -394,6 +428,7 @@ Page({
         captureDraft: emptyCaptureDraft(),
         selectedImageName: ""
       });
+      await this.loadLiveRecords();
     } catch (error) {
       wx.showToast({
         title: error.message || "保存直播记录失败",
