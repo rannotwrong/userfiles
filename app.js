@@ -18,7 +18,6 @@
     activeTier: "全部",
     search: "",
     selectedImage: null,
-    previewUrl: "",
     detailUserId: null,
     cloudEnabled: Boolean(cloudStore?.isConfigured),
     currentUser: null,
@@ -887,11 +886,8 @@
     $("#captureTopGift").value = "";
     $("#captureScore").value = 0;
     $("#imageInput").value = "";
-    $("#previewWrap").hidden = true;
     $("#recognizeProgress").hidden = true;
     $("#progressBar").style.width = "0";
-    if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
-    state.previewUrl = "";
     state.selectedImage = null;
   }
 
@@ -941,18 +937,13 @@
     ].filter(Boolean).join("\n");
   }
 
-  function setSelectedImage(file) {
+  async function setSelectedImage(file) {
     if (!file || !file.type.startsWith("image/")) {
       showToast("请选择图片文件");
       return;
     }
-    if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
     state.selectedImage = file;
-    state.previewUrl = URL.createObjectURL(file);
-    $("#imagePreview").src = state.previewUrl;
-    $("#imageName").textContent = file.name;
-    $("#previewWrap").hidden = false;
-    setImportStatus("图片只在当前页面本地预览，不会上传。");
+    await recognizeImage();
   }
 
   async function recognizeImage() {
@@ -960,13 +951,14 @@
       showToast("请先选择一张图片");
       return;
     }
-    const button = $("#recognizeBtn");
+    const button = $("#parseBtn");
     const progress = $("#recognizeProgress");
     button.disabled = true;
+    const originalText = button.textContent;
     button.textContent = "识别中…";
     progress.hidden = false;
     $("#progressBar").style.width = "4%";
-    setImportStatus("正在模拟识别图片文字…");
+    setImportStatus("正在识别图片文字和关键信息…");
 
     try {
       const result = await window.NotebookAPI.recognizeLiveImage(state.selectedImage, (value) => {
@@ -975,14 +967,14 @@
       const current = $("#liveText").value.trim();
       $("#liveText").value = [current, result.data.text].filter(Boolean).join("\n");
       fillCaptureSummary(result.data.summary || {});
-      setImportStatus(`识别完成，模拟置信度 ${Math.round(result.data.confidence * 100)}%。请检查文字后记录。`);
+      setImportStatus(`识别完成，置信度 ${Math.round(result.data.confidence * 100)}%。请检查字段后记录。`);
       showToast("图片文字已识别");
     } catch (error) {
       setImportStatus(error.message || "图片识别失败，请改用文字录入。");
       showToast("图片识别失败");
     } finally {
       button.disabled = false;
-      button.textContent = "识别图片";
+      button.textContent = originalText;
       setTimeout(() => {
         progress.hidden = true;
         $("#progressBar").style.width = "0";
@@ -1330,7 +1322,6 @@
       });
     });
     dropzone.addEventListener("drop", (event) => setSelectedImage(event.dataTransfer.files[0]));
-    $("#recognizeBtn").addEventListener("click", recognizeImage);
     $("#parseBtn").addEventListener("click", parseAndSave);
   }
 

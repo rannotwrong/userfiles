@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-CN"><head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户日记">
   <title>用户日记 · User Atlas</title>
@@ -98,7 +98,7 @@
           <input id="imageInput" type="file" accept="image/*">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
           <strong>上传聊天或直播截图</strong>
-          <small>点击选择或拖拽图片</small>
+          <small>选择或拖拽图片后自动识别</small>
         </label>
         <div class="capture-result-grid" aria-label="直播识别结果">
           <label class="capture-field">
@@ -126,10 +126,6 @@
             <input id="captureScore" type="number" min="0" max="100" step="1" value="0">
           </label>
         </div>
-        <div class="image-preview-wrap" id="previewWrap" hidden="">
-          <img id="imagePreview" alt="待识别图片预览">
-          <span id="imageName"></span>
-        </div>
         <div class="progress" id="recognizeProgress" hidden="" aria-label="图片识别进度">
           <span id="progressBar"></span>
         </div>
@@ -139,7 +135,6 @@
             <textarea id="liveText" placeholder="例如：小满，支持率 35%，总消费金额 5600，单次消费 600，愿意接话，直播间聊天积极…"></textarea>
           </div>
           <div class="import-actions">
-            <button class="secondary-btn" id="recognizeBtn" type="button">识别图片</button>
             <button class="primary-btn" id="parseBtn" type="button">解析并记录</button>
           </div>
         </div>
