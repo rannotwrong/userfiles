@@ -1,0 +1,14 @@
+{
+  "description": "用户日记微信小程序版",
+  "appid": "touristappid",
+  "projectname": "user-profile-miniprogram",
+  "miniprogramRoot": "./",
+  "compileType": "miniprogram",
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  }
+}

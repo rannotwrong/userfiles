@@ -1,0 +1,14 @@
+<view class="page-shell login-page">
+  <view class="brand-card card">
+    <image class="logo" src="../../assets/logo.jpeg" mode="aspectFit"></image>
+    <text class="eyebrow">USER ATLAS</text>
+    <text class="title">用户日记</text>
+    <text class="desc">用微信身份登录，自动同步你的用户档案和直播记录。</text>
+  </view>
+
+  <button class="primary-btn" loading="{{isLoggingIn}}" disabled="{{isLoggingIn}}" bindtap="handleWechatLogin">
+    {{isLoggingIn ? "登录中…" : "微信一键登录"}}
+  </button>
+
+  <text class="tip">登录状态默认保留 30 天。除非主动退出，否则下次打开会自动进入。</text>
+</view>

@@ -1,0 +1,189 @@
+<view class="page-shell home-page">
+  <view class="topbar">
+    <view>
+      <text class="eyebrow">USER ATLAS</text>
+      <text class="page-title">用户日记</text>
+    </view>
+    <button class="plain-btn" bindtap="handleLogout">退出</button>
+  </view>
+
+  <view class="stats-grid">
+    <view class="stat-card">
+      <text class="stat-label">档案总数</text>
+      <text class="stat-value">{{stats.total}}</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-label">S级用户</text>
+      <text class="stat-value">{{stats.sCount}}</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-label">A级用户</text>
+      <text class="stat-value">{{stats.aCount}}</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-label">今日记录</text>
+      <text class="stat-value">{{stats.todayRecords}}</text>
+    </view>
+  </view>
+
+  <view class="card capture-card">
+    <view class="section-head">
+      <view>
+        <text class="eyebrow">LIVE CAPTURE</text>
+        <text class="section-title">直播记录</text>
+      </view>
+      <text class="pill">智能录入</text>
+    </view>
+
+    <button class="upload-zone" loading="{{isRecognizing}}" disabled="{{isRecognizing}}" bindtap="chooseLiveImage">
+      <text class="upload-icon">＋</text>
+      <text class="upload-title">{{isRecognizing ? "正在识别…" : "上传聊天或直播截图"}}</text>
+      <text class="upload-desc">{{selectedImageName || "选择图片后自动识别文字和关键信息"}}</text>
+    </button>
+
+    <view class="capture-grid">
+      <view class="field">
+        <text class="field-label">日期</text>
+        <picker mode="date" value="{{captureDraft.date}}" bindchange="handleCaptureDateChange">
+          <view class="picker-field">{{captureDraft.date}}</view>
+        </picker>
+      </view>
+      <view class="field">
+        <text class="field-label">总收入</text>
+        <input value="{{captureDraft.totalRevenue}}" type="digit" placeholder="0" data-field="totalRevenue" bindinput="handleCaptureInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">送礼人数</text>
+        <input value="{{captureDraft.giftUserCount}}" type="number" placeholder="0" data-field="giftUserCount" bindinput="handleCaptureInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">新用户送礼人数</text>
+        <input value="{{captureDraft.newGiftUserCount}}" type="number" placeholder="0" data-field="newGiftUserCount" bindinput="handleCaptureInput" />
+      </view>
+      <view class="field wide-field">
+        <text class="field-label">最高价值礼物</text>
+        <input value="{{captureDraft.topGift}}" placeholder="如：嘉年华 / 守护礼盒" data-field="topGift" bindinput="handleCaptureInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">评分</text>
+        <input value="{{captureDraft.score}}" type="number" placeholder="0-100" data-field="score" bindinput="handleCaptureInput" />
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="field-label">可文字描述</text>
+      <textarea class="text-area" value="{{captureDraft.sourceText}}" placeholder="例如：日期2026-08-27，总收入5600，送礼人数12，新用户送礼人数3，最高价值礼物嘉年华，评分88…" data-field="sourceText" bindinput="handleCaptureInput"></textarea>
+    </view>
+
+    <view class="action-row">
+      <button class="secondary-btn action-btn" loading="{{isRecognizing}}" disabled="{{isRecognizing}}" bindtap="recognizeFromText">提取文字信息</button>
+      <button class="primary-btn action-btn" loading="{{isSavingRecord}}" disabled="{{isSavingRecord}}" bindtap="saveLiveRecord">保存直播记录</button>
+    </view>
+  </view>
+
+  <view class="card profile-card">
+    <view class="section-head">
+      <view>
+        <text class="eyebrow">PROFILES</text>
+        <text class="section-title">用户档案</text>
+      </view>
+      <button class="mini-primary" bindtap="openCreateProfile">新增</button>
+    </view>
+
+    <view class="toolbar">
+      <view class="search-box">
+        <input value="{{keyword}}" confirm-type="search" placeholder="搜索昵称…" bindinput="handleSearchInput" bindconfirm="handleSearchConfirm" />
+        <button class="search-btn" bindtap="handleSearchConfirm">搜</button>
+      </view>
+      <picker mode="selector" range="{{tierOptions}}" value="{{activeTierIndex}}" bindchange="handleTierChange">
+        <view class="tier-picker">分层：{{activeTier}}</view>
+      </picker>
+    </view>
+
+    <view wx:if="{{isLoading}}" class="empty-state">正在读取档案…</view>
+    <view wx:elif="{{users.length === 0}}" class="empty-state">还没有用户档案，点击“新增”创建第一位用户。</view>
+    <view wx:else class="profile-list">
+      <view class="profile-item" wx:for="{{users}}" wx:key="id" data-id="{{item.id}}" bindtap="openEditProfile">
+        <view class="tier-badge tier-{{item.tier}}">{{item.tier}}</view>
+        <view class="profile-main">
+          <view class="profile-row">
+            <text class="profile-name">{{item.nickname}}</text>
+            <text class="profile-money">¥{{item.amount}}</text>
+          </view>
+          <text class="profile-meta">生日 {{item.birthday || "未填写"}} · 最高单笔 ¥{{item.highestSingleSpendAmount || 0}}</text>
+          <view class="tag-row">
+            <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{isProfileModalOpen}}" class="modal-mask">
+    <view class="modal-card">
+      <view class="section-head">
+        <text class="section-title">{{profileModalTitle}}</text>
+        <button class="plain-btn" bindtap="closeProfileModal">关闭</button>
+      </view>
+
+      <view class="field">
+        <text class="field-label">昵称</text>
+        <input value="{{profileDraft.nickname}}" placeholder="请输入昵称" data-field="nickname" bindinput="handleProfileInput" />
+      </view>
+      <view class="form-row">
+        <view class="field">
+          <text class="field-label">手动分层</text>
+          <picker mode="selector" range="{{editableTierOptions}}" value="{{profileTierIndex}}" bindchange="handleProfileTierChange">
+            <view class="picker-field">{{profileDraft.tier}}</view>
+          </picker>
+        </view>
+        <view class="field">
+          <text class="field-label">生日</text>
+          <picker mode="date" value="{{profileDraft.birthday}}" bindchange="handleProfileBirthdayChange">
+            <view class="picker-field">{{profileDraft.birthday || "选择生日"}}</view>
+          </picker>
+        </view>
+      </view>
+      <view class="form-row">
+        <view class="field">
+          <text class="field-label">累计收入</text>
+          <input value="{{profileDraft.amount}}" type="digit" placeholder="0" data-field="amount" bindinput="handleProfileInput" />
+        </view>
+        <view class="field">
+          <text class="field-label">最高单笔消费</text>
+          <input value="{{profileDraft.highestSingleSpendAmount}}" type="digit" placeholder="0" data-field="highestSingleSpendAmount" bindinput="handleProfileInput" />
+        </view>
+      </view>
+      <view class="field">
+        <text class="field-label">自定义标签</text>
+        <input value="{{profileDraft.manualTags}}" placeholder="用逗号、顿号或空格分隔" data-field="manualTags" bindinput="handleProfileInput" />
+      </view>
+
+      <view class="check-grid">
+        <label class="check-chip">
+          <switch checked="{{profileDraft.isWillingToReply}}" data-field="isWillingToReply" bindchange="handleProfileBoolean" color="#12b8c8" />
+          <text>愿意接话</text>
+        </label>
+        <label class="check-chip">
+          <switch checked="{{profileDraft.isNoPurpose}}" data-field="isNoPurpose" bindchange="handleProfileBoolean" color="#12b8c8" />
+          <text>无目的</text>
+        </label>
+        <label class="check-chip">
+          <switch checked="{{profileDraft.hasOfflineMealRequest}}" data-field="hasOfflineMealRequest" bindchange="handleProfileBoolean" color="#12b8c8" />
+          <text>线下/吃饭请求</text>
+        </label>
+        <label class="check-chip">
+          <switch checked="{{profileDraft.isOnlyRankAndChat}}" data-field="isOnlyRankAndChat" bindchange="handleProfileBoolean" color="#12b8c8" />
+          <text>只占榜和聊天</text>
+        </label>
+      </view>
+
+      <view class="field">
+        <text class="field-label">备注</text>
+        <textarea class="text-area small" value="{{profileDraft.notes}}" placeholder="记录偏好、互动边界或维护方式" data-field="notes" bindinput="handleProfileInput"></textarea>
+      </view>
+
+      <button class="primary-btn save-profile-btn" loading="{{isSavingProfile}}" disabled="{{isSavingProfile}}" bindtap="submitProfile">保存档案</button>
+    </view>
+  </view>
+</view>

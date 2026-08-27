@@ -1,0 +1,14 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/home/home"
+  ],
+  "window": {
+    "navigationBarTitleText": "用户日记",
+    "navigationBarBackgroundColor": "#f5f8fc",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f8fc"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
