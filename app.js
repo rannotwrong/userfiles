@@ -123,7 +123,12 @@
   function getUserMetrics(user) {
     const interactions = Array.isArray(user.interactions) ? user.interactions : [];
     const appearedFromLogs = interactions.filter((item) => item.appeared !== false).length;
-    const supportedFromLogs = interactions.filter((item) => item.supported || toNumber(item.spendAmount) > 0).length;
+    const supportedInteractions = interactions.filter((item) => item.supported || toNumber(item.spendAmount) > 0);
+    const supportedFromLogs = supportedInteractions.length;
+    const currentMonth = toMonthKey(new Date());
+    const supportedThisMonthFromLogs = supportedInteractions
+      .filter((item) => toMonthKey(item.time || item.date || "") === currentMonth)
+      .length;
     const spendAmounts = interactions.map((item) => toNumber(item.spendAmount));
     const totalSpendFromLogs = spendAmounts.reduce((sum, value) => sum + value, 0);
     const latestSpendFromLogs = spendAmounts.find((value) => value > 0) || 0;
@@ -131,7 +136,7 @@
     const highSingleFromLogs = spendAmounts.filter((value) => value > 1000).length;
     const singleOver200FromLogs = spendAmounts.filter((value) => value > 200).length;
     const appearedCount = Math.max(toNumber(user.appearedCount), appearedFromLogs);
-    const supportedCount = Math.max(toNumber(user.supportedCount), supportedFromLogs);
+    const supportedCount = interactions.length ? supportedThisMonthFromLogs : toNumber(user.supportedCount);
     const totalLiveCount = Math.max(toNumber(user.totalLiveCount), appearedCount, supportedCount);
     const totalSpendAmount = Math.max(toNumber(user.amount), totalSpendFromLogs);
     const latestSingleSpendAmount = Math.max(toNumber(user.latestSingleSpendAmount), latestSpendFromLogs);
@@ -197,6 +202,33 @@
     return dedupe(tags);
   }
 
+  function getInteractionDates(user, includeFirst = true) {
+    return [
+      ...(includeFirst ? [user.firstInteraction] : []),
+      user.lastInteraction,
+      ...(Array.isArray(user.interactions) ? user.interactions.map((item) => item.time || item.date) : [])
+    ]
+      .filter(Boolean)
+      .map((value) => new Date(value))
+      .filter((date) => !Number.isNaN(date.getTime()));
+  }
+
+  function getFirstInteractionDate(user, savedSnapshot = {}) {
+    if (user.firstInteraction || savedSnapshot.firstInteraction) {
+      return dateOnlyISOString(user.firstInteraction || savedSnapshot.firstInteraction);
+    }
+    const dates = getInteractionDates(user);
+    if (!dates.length) return "";
+    return dateOnlyISOString(new Date(Math.min(...dates.map((date) => date.getTime()))));
+  }
+
+  function getLatestInteractionDate(user) {
+    if (user.lastInteraction) return dateOnlyISOString(user.lastInteraction);
+    const dates = getInteractionDates(user, false);
+    if (!dates.length) return "";
+    return dateOnlyISOString(new Date(Math.max(...dates.map((date) => date.getTime()))));
+  }
+
   function normalizeUser(user, options = {}) {
     const savedSnapshot = user.taggingSnapshot && typeof user.taggingSnapshot === "object" ? user.taggingSnapshot : {};
     const { recalculateTier = false, tierSource = user.tierSource || savedSnapshot.tierSource } = options;
@@ -217,6 +249,8 @@
         `人工设定：${finalTier}级`,
         `系统参考：${classification.rule}`
       ];
+    const firstInteraction = getFirstInteractionDate(user, savedSnapshot);
+    const lastInteraction = getLatestInteractionDate(user);
     return {
       ...user,
       tier: finalTier,
@@ -239,6 +273,9 @@
       isNoPurpose: metrics.isNoPurpose,
       hasOfflineMealRequest: metrics.hasOfflineMealRequest,
       isOnlyRankAndChat: metrics.isOnlyRankAndChat,
+      firstInteraction,
+      lastInteraction,
+      createdVia: user.createdVia || savedSnapshot.createdVia || "manual",
       matchedRules,
       taggingSnapshot: {
         ...metrics,
@@ -246,6 +283,8 @@
         systemTier: classification.tier,
         effectiveTier: finalTier,
         birthday,
+        firstInteraction,
+        createdVia: user.createdVia || savedSnapshot.createdVia || "manual",
         maxSingleSpendAmount: metrics.maxSingleSpendAmount
       }
     };
@@ -296,24 +335,25 @@
     })[char]);
   }
 
-  function formatDate(value, withTime = false) {
+  function formatDate(value) {
     if (!value) return "尚未记录";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "尚未记录";
     return new Intl.DateTimeFormat("zh-CN", {
       year: "numeric",
       month: "2-digit",
-      day: "2-digit",
-      ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {})
+      day: "2-digit"
     }).format(date);
   }
 
-  function toLocalInput(value) {
+  function toDateInput(value) {
+    return toDateKey(value);
+  }
+
+  function dateOnlyISOString(value) {
     if (!value) return "";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "";
-    const offset = date.getTimezoneOffset() * 60000;
-    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+    const dateKey = toDateKey(value);
+    return dateKey ? `${dateKey}T00:00:00.000Z` : "";
   }
 
   function isStale(user) {
@@ -482,7 +522,9 @@
     $("#statA").textContent = state.users.filter((user) => user.tier === "A").length;
     $("#statNew").textContent = state.users.filter((user) => {
       const created = new Date(user.createdAt);
-      return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+      return user.createdVia !== "live_record" &&
+        created.getMonth() === now.getMonth() &&
+        created.getFullYear() === now.getFullYear();
     }).length;
   }
 
@@ -514,7 +556,7 @@
               <span class="avatar">${escapeHTML(user.nickname.slice(0, 1))}</span>
               <span>
                 <strong class="name">${escapeHTML(user.nickname)}</strong>
-                <span class="level">${user.birthday ? escapeHTML(getZodiacSign(user.birthday) || "生日已记录") : `最近互动 ${formatDate(user.lastInteraction)}`}</span>
+                <span class="level">${user.birthday ? escapeHTML(getZodiacSign(user.birthday) || "生日已记录") : `生日未知 · 最近互动 ${formatDate(user.lastInteraction)}`}</span>
               </span>
             </span>
             <span class="tier tier-${user.tier}" title="${user.tier} 级用户">${user.tier}</span>
@@ -528,8 +570,8 @@
               <span class="meta-value ${isStale(user) ? "stale" : ""}">${formatDate(user.lastInteraction)}</span>
             </span>
             <span>
-              <span class="meta-label">支持率 / 消费</span>
-              <span class="meta-value">${formatPercent(user.supportRate || 0)} · ¥ ${Number(user.amount || 0).toLocaleString("zh-CN")}</span>
+              <span class="meta-label">本月支持 / 累计消费</span>
+              <span class="meta-value">${user.supportedCount || 0} 次 · ¥ ${Number(user.amount || 0).toLocaleString("zh-CN")}</span>
             </span>
           </span>
         </button>
@@ -923,7 +965,8 @@
     $("#latestSingleSpendAmount").value = user?.latestSingleSpendAmount || 0;
     $("#highSingleSpendCount").value = user?.highSingleSpendCount || 0;
     $("#maxSingleSpendAmount").value = user?.maxSingleSpendAmount || 0;
-    $("#lastInteraction").value = toLocalInput(user?.lastInteraction || new Date().toISOString());
+    $("#firstInteraction").value = toDateInput(user?.firstInteraction || "");
+    $("#lastInteraction").value = toDateInput(user?.lastInteraction || "");
     $("#isWillingToReply").checked = Boolean(user?.isWillingToReply);
     $("#isNoPurpose").checked = user?.isNoPurpose !== false;
     $("#hasOfflineMealRequest").checked = Boolean(user?.hasOfflineMealRequest);
@@ -941,12 +984,15 @@
     const rows = [
       ["职业", user.occupation || "未记录"],
       ["兴趣", user.interests || "未记录"],
-      ["生日", user.birthday ? `${user.birthday}（${getZodiacSign(user.birthday) || "未识别星座"}）` : "未记录"],
+      ["生日", user.birthday ? `${user.birthday}（${getZodiacSign(user.birthday) || "未识别星座"}）` : "未知"],
+      ["首次互动时间", formatDate(user.firstInteraction)],
+      ["最近互动时间", formatDate(user.lastInteraction)],
       ["近期事件", user.recentEvent || "未记录"],
       ["聊过的话题", user.topics || "未记录"],
       ["消费情况", `累计 ¥ ${Number(user.amount || 0).toLocaleString("zh-CN")}`],
       ["分层来源", user.tierSource === "system" ? "系统根据直播互动自动判定" : "人工设定"],
-      ["支持率", `${formatPercent(user.supportRate || 0)}（支持 ${user.supportedCount || 0} / 直播 ${user.totalLiveCount || 0}）`],
+      ["本月支持次数", `${user.supportedCount || 0} 次`],
+      ["支持率", `${formatPercent(user.supportRate || 0)}（本月支持 ${user.supportedCount || 0} / 直播 ${user.totalLiveCount || 0}）`],
       ["单次消费", `最近 ¥ ${Number(user.latestSingleSpendAmount || 0).toLocaleString("zh-CN")}；最高 ¥ ${Number(user.maxSingleSpendAmount || 0).toLocaleString("zh-CN")}；单笔 >1000 次数 ${user.highSingleSpendCount || 0}`],
       ["行为字段", [
         user.isWillingToReply ? "愿意接话" : "未记录接话",
@@ -981,7 +1027,7 @@
         ${interactions.length
           ? interactions.map((item) => `
             <div class="timeline-item">
-              <time>${formatDate(item.time, true)}</time>
+              <time>${formatDate(item.time)}</time>
               <p>${escapeHTML(item.note || "完成一次互动")}</p>
             </div>
           `).join("")
@@ -1094,6 +1140,75 @@
     ].filter(Boolean).join("\n");
   }
 
+  function findUserByNickname(nickname) {
+    const key = String(nickname || "").trim().toLowerCase();
+    if (!key || key === "待确认用户") return null;
+    return state.users.find((user) => String(user.nickname || "").trim().toLowerCase() === key) || null;
+  }
+
+  function buildLiveRecordUserUpdate(parsedUser, summary, rawText) {
+    const existing = findUserByNickname(parsedUser.nickname);
+    const interactionDate = dateOnlyISOString(summary.date || new Date());
+    const spendAmount = toNumber(parsedUser.latestSingleSpendAmount || parsedUser.amount);
+    const supported = Boolean(parsedUser.supportedCount || parsedUser.amount || spendAmount);
+    const interaction = {
+      time: interactionDate,
+      note: `直播记录：${rawText.slice(0, 120)}`,
+      appeared: true,
+      supported,
+      spendAmount,
+      isWillingToReply: Boolean(parsedUser.isWillingToReply),
+      hasOfflineMealRequest: Boolean(parsedUser.hasOfflineMealRequest),
+      isOnlyRankAndChat: Boolean(parsedUser.isOnlyRankAndChat),
+      topics: parsedUser.topics || "由直播记录自动导入",
+      remark: parsedUser.recentEvent || rawText.slice(0, 180),
+      rawText
+    };
+    const previousInteractions = Array.isArray(existing?.interactions) ? existing.interactions : [];
+
+    /*
+      直播记录回写用户档案规则：
+      1. 累计消费金额：原累计消费金额 + 本次直播记录识别到的单次/本场消费金额。
+      2. 本月支持次数：由本月互动记录中 supported=true 或 spendAmount>0 的次数自动计算。
+      3. 最近单次消费：更新为本次直播记录识别到的消费金额。
+      4. 单笔 >1000 次数：原次数 + 本次消费金额是否 >1000。
+      5. 单笔最高消费：取原最高单笔与本次消费金额的最大值。
+      6. 首次互动时间：已有则保留，没有则使用本次直播记录日期。
+      7. 最近互动时间：更新为本次直播记录日期。
+      8. 分层：直播记录属于系统更新，会重新计算系统分层。
+    */
+    return normalizeUser({
+      ...(existing || {}),
+      id: existing?.id || (state.cloudEnabled && state.currentUser ? "" : uid()),
+      ...(!existing ? parsedUser : {}),
+      nickname: existing?.nickname || parsedUser.nickname,
+      tierSource: "system",
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      createdVia: existing ? (existing.createdVia || "manual") : "live_record",
+      firstInteraction: existing?.firstInteraction || interactionDate,
+      lastInteraction: interactionDate,
+      recentEvent: parsedUser.recentEvent || existing?.recentEvent || "",
+      topics: parsedUser.topics || existing?.topics || "",
+      maintenance: parsedUser.maintenance || existing?.maintenance || "",
+      amount: toNumber(existing?.amount) + spendAmount,
+      totalLiveCount: toNumber(existing?.totalLiveCount) + 1,
+      appearedCount: toNumber(existing?.appearedCount) + 1,
+      supportedCount: toNumber(existing?.supportedCount) + (supported ? 1 : 0),
+      latestSingleSpendAmount: spendAmount,
+      maxSingleSpendAmount: Math.max(toNumber(existing?.maxSingleSpendAmount), spendAmount),
+      highSingleSpendCount: toNumber(existing?.highSingleSpendCount) + (spendAmount > 1000 ? 1 : 0),
+      singleSpendOver200Count: toNumber(existing?.singleSpendOver200Count) + (spendAmount > 200 ? 1 : 0),
+      isWillingToReply: Boolean(existing?.isWillingToReply || parsedUser.isWillingToReply),
+      isNoPurpose: Boolean(existing?.isNoPurpose !== false && parsedUser.isNoPurpose !== false),
+      hasOfflineMealRequest: Boolean(existing?.hasOfflineMealRequest || parsedUser.hasOfflineMealRequest),
+      isOnlyRankAndChat: Boolean(parsedUser.isOnlyRankAndChat && !supported),
+      interactions: [
+        interaction,
+        ...previousInteractions
+      ]
+    }, { recalculateTier: true, tierSource: "system" });
+  }
+
   async function persistLiveSession(summary, user, rawText, ocrText = "") {
     const session = normalizeLiveSessionRecord({
       date: summary.date,
@@ -1193,27 +1308,13 @@
       if (result.code !== 0) throw new Error(result.message);
       fillCaptureSummary(result.data.liveSummary || {}, { onlyEmpty: true });
       const liveSummary = collectCaptureSummary();
-      const now = new Date().toISOString();
-      const draft = normalizeUser({
-        id: state.cloudEnabled && state.currentUser ? "" : uid(),
-        ...result.data,
-        tierSource: "system",
-        createdAt: now,
-        lastInteraction: now,
-        interactions: [{
-          time: now,
-          note: `直播记录：${text.slice(0, 120)}`,
-          appeared: true,
-          supported: Boolean(result.data.supportedCount || result.data.amount),
-          spendAmount: Number(result.data.latestSingleSpendAmount || result.data.amount || 0),
-          isWillingToReply: Boolean(result.data.isWillingToReply),
-          hasOfflineMealRequest: Boolean(result.data.hasOfflineMealRequest),
-          isOnlyRankAndChat: Boolean(result.data.isOnlyRankAndChat)
-        }]
-      }, { recalculateTier: true, tierSource: "system" });
-      const saved = await persistUser(draft, null, "system");
+      const existing = findUserByNickname(result.data.nickname);
+      const draft = buildLiveRecordUserUpdate(result.data, liveSummary, text);
+      const saved = await persistUser(draft, existing?.tier || null, "system");
       const normalizedSaved = normalizeUser(saved, { recalculateTier: true, tierSource: "system" });
-      state.users.unshift(normalizedSaved);
+      state.users = existing
+        ? state.users.map((item) => item.id === existing.id ? normalizedSaved : item)
+        : [normalizedSaved, ...state.users];
       await persistLiveSession(liveSummary, normalizedSaved, text, result.data.text || "");
       if (!state.cloudEnabled) saveLocalUsers();
       resetImport();
@@ -1222,8 +1323,8 @@
         item.setAttribute("aria-pressed", String(item.dataset.tier === "全部"));
       });
       renderUsers();
-      setImportStatus("已自动归档，可打开用户详情继续完善。");
-      showToast(`已记录用户“${draft.nickname}”，自动判为 ${draft.tier} 级`);
+      setImportStatus(existing ? "已根据直播记录更新用户档案。" : "已自动生成档案，可打开用户详情继续完善。");
+      showToast(`${existing ? "已更新" : "已记录"}用户“${draft.nickname}”，当前为 ${draft.tier} 级`);
     } catch (error) {
       setImportStatus(error.message || "解析失败，请检查文字后重试。");
       showToast("直播记录解析失败");
@@ -1402,7 +1503,9 @@
         isOnlyRankAndChat: $("#isOnlyRankAndChat").checked,
         maintenance: $("#maintenance").value.trim(),
         createdAt: existing?.createdAt || new Date().toISOString(),
-        lastInteraction: $("#lastInteraction").value ? new Date($("#lastInteraction").value).toISOString() : "",
+        firstInteraction: dateOnlyISOString($("#firstInteraction").value) || existing?.firstInteraction || "",
+        lastInteraction: dateOnlyISOString($("#lastInteraction").value) || existing?.lastInteraction || "",
+        createdVia: existing?.createdVia || "manual",
         interactions: existing?.interactions || []
       });
       try {
@@ -1428,7 +1531,7 @@
       event.preventDefault();
       const user = state.users.find((item) => item.id === $("#interactionUserId").value);
       if (!user) return;
-      const now = new Date().toISOString();
+      const now = dateOnlyISOString(new Date());
       const spendAmount = Number($("#interactionSpend").value || 0);
       const supported = $("#interactionSupported").checked || spendAmount > 0;
       const interaction = {
@@ -1446,6 +1549,7 @@
       const updated = normalizeUser({
         ...user,
         tierSource: "system",
+        firstInteraction: user.firstInteraction || now,
         lastInteraction: now,
         amount: Number(user.amount || 0) + spendAmount,
         totalLiveCount: Math.max(Number($("#interactionTotalLive").value || 0), Number(user.totalLiveCount || 0)),

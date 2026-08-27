@@ -10,7 +10,7 @@
     const supportRateMatch = cleaned.match(/(?:支持率)[^\d]{0,8}(\d+(?:\.\d{1,2})?)\s*%?/);
     const totalLiveMatch = cleaned.match(/(?:总直播次数|直播场次|总场次)[^\d]{0,8}(\d+)/);
     const appearedMatch = cleaned.match(/(?:出现次数|来过|出现过)[^\d]{0,8}(\d+)/);
-    const supportedMatch = cleaned.match(/(?:支持次数|支持过)[^\d]{0,8}(\d+)/);
+    const supportedMatch = cleaned.match(/(?:本月支持次数|月支持次数|支持次数|支持过)[^\d]{0,8}(\d+)/);
     const highSingleMatch = cleaned.match(/(?:单笔大于1000|单笔>1000|大额次数)[^\d]{0,8}(\d+)/);
     const occupationMatch = cleaned.match(/(?:职业|是一名|是个|从事)\s*[:：]?\s*([^，,。\n；;]{2,12})/);
     const nameLabel = cleaned.match(/(?:昵称|用户|名字)\s*[:：]\s*([^，,。\n；;]{1,20})/);

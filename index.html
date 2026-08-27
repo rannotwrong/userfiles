@@ -385,7 +385,7 @@
             <input id="amount" type="number" min="0" step="0.01" value="0">
           </div>
           <div class="form-field">
-            <label class="field-label" for="supportedCount">支持次数</label>
+            <label class="field-label" for="supportedCount">本月支持次数</label>
             <input id="supportedCount" type="number" min="0" step="1" value="0">
           </div>
           <div class="form-field">
@@ -401,8 +401,12 @@
             <input id="maxSingleSpendAmount" type="number" min="0" step="0.01" value="0">
           </div>
           <div class="form-field">
+            <label class="field-label" for="firstInteraction">首次互动时间</label>
+            <input id="firstInteraction" type="date">
+          </div>
+          <div class="form-field">
             <label class="field-label" for="lastInteraction">最近互动时间</label>
-            <input id="lastInteraction" type="datetime-local">
+            <input id="lastInteraction" type="date">
           </div>
           <div class="form-field full">
             <span class="field-label">自动打标行为字段</span>
@@ -498,7 +502,7 @@
             </div>
           </div>
         </div>
-        <p class="hint">保存后会自动记录当前时间，并更新“最近互动”。</p>
+        <p class="hint">保存后会自动记录当前日期，并更新“最近互动”。</p>
         <div class="dialog-actions">
           <button class="secondary-btn" type="button" data-close="interactionDialog">取消</button>
           <button class="primary-btn" type="submit">记下这次互动</button>

@@ -59,6 +59,8 @@
         systemTier: user.systemTier || user.taggingSnapshot?.systemTier || user.tier || "C",
         effectiveTier: user.tier || "C",
         birthday: user.birthday ?? user.taggingSnapshot?.birthday ?? "",
+        firstInteraction: user.firstInteraction ?? user.taggingSnapshot?.firstInteraction ?? "",
+        createdVia: user.createdVia || user.taggingSnapshot?.createdVia || "manual",
         maxSingleSpendAmount: toNumber(user.maxSingleSpendAmount ?? user.taggingSnapshot?.maxSingleSpendAmount)
       },
       last_interaction_at: user.lastInteraction || null,
@@ -97,6 +99,8 @@
       tierSource: row.tagging_snapshot?.tierSource || "manual",
       systemTier: row.tagging_snapshot?.systemTier || row.tier || "C",
       birthday: row.tagging_snapshot?.birthday || "",
+      firstInteraction: row.tagging_snapshot?.firstInteraction || "",
+      createdVia: row.tagging_snapshot?.createdVia || "manual",
       maxSingleSpendAmount: toNumber(row.tagging_snapshot?.maxSingleSpendAmount ?? row.latest_single_spend_amount),
       createdAt: row.created_at,
       lastInteraction: row.last_interaction_at,
@@ -300,9 +304,16 @@
     if (error) throw error;
 
     const savedUser = await saveUser(updatedUser, user.tier, "system");
+    const savedInteraction = fromDbInteraction(data);
     return {
-      user: savedUser,
-      interaction: fromDbInteraction(data)
+      user: {
+        ...savedUser,
+        interactions: [
+          savedInteraction,
+          ...toArray(user.interactions)
+        ]
+      },
+      interaction: savedInteraction
     };
   }
 
@@ -344,6 +355,8 @@
         systemTier: user.systemTier || user.taggingSnapshot?.systemTier || user.tier || "C",
         effectiveTier: user.tier || "C",
         birthday: user.birthday ?? user.taggingSnapshot?.birthday ?? "",
+        firstInteraction: user.firstInteraction ?? user.taggingSnapshot?.firstInteraction ?? "",
+        createdVia: user.createdVia || user.taggingSnapshot?.createdVia || "manual",
         maxSingleSpendAmount: toNumber(user.maxSingleSpendAmount ?? user.taggingSnapshot?.maxSingleSpendAmount)
       },
       operator_type: safeOperatorType
