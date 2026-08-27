@@ -341,7 +341,7 @@ h1 {
 
 .workspace {
   display: grid;
-  grid-template-areas: "toolbar" "import" "list";
+  grid-template-areas: "toolbar" "list";
   gap: var(--space-6);
 }
 .toolbar {
@@ -598,8 +598,8 @@ button:active { transform: translateY(1px) !important; }
 }
 
 .import-panel {
-  grid-area: import;
   align-self: start;
+  margin-bottom: var(--space-6);
   padding: 20px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -1179,13 +1179,9 @@ dialog::backdrop {
   .metric-grid-five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .plan-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .workspace {
-    grid-template-columns: minmax(0, 1fr) 304px;
-    grid-template-areas: "toolbar toolbar" "list import";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "toolbar" "list";
     align-items: start;
-  }
-  .import-panel {
-    position: sticky;
-    top: var(--space-4);
   }
 }
 
