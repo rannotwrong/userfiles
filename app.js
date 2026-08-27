@@ -521,10 +521,10 @@
     $("#statS").textContent = state.users.filter((user) => user.tier === "S").length;
     $("#statA").textContent = state.users.filter((user) => user.tier === "A").length;
     $("#statNew").textContent = state.users.filter((user) => {
-      const created = new Date(user.createdAt);
-      return user.createdVia !== "live_record" &&
-        created.getMonth() === now.getMonth() &&
-        created.getFullYear() === now.getFullYear();
+      const firstInteraction = new Date(user.firstInteraction);
+      return !Number.isNaN(firstInteraction.getTime()) &&
+        firstInteraction.getMonth() === now.getMonth() &&
+        firstInteraction.getFullYear() === now.getFullYear();
     }).length;
   }
 
