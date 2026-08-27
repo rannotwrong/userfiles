@@ -131,9 +131,11 @@ svg {
   overflow: hidden;
 }
 .brand-logo {
-  width: 88%;
-  height: 88%;
+  display: block;
+  width: 78%;
+  height: 78%;
   object-fit: contain;
+  object-position: center;
 }
 .eyebrow,
 .section-kicker {
@@ -1203,7 +1205,7 @@ dialog::backdrop {
     height: 42px;
     border-radius: 14px;
   }
-  .brand-logo { width: 88%; height: 88%; }
+  .brand-logo { width: 74%; height: 74%; }
   .view-tabs { width: 100%; }
   .view-tab { flex: 1; }
   .stats { gap: var(--space-2); }
