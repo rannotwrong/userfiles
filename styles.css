@@ -383,16 +383,17 @@ h1 {
 .search-wrap > svg {
   position: absolute;
   top: 50%;
-  left: 14px;
+  right: 14px;
   width: 18px;
   height: 18px;
   transform: translateY(-50%);
   color: var(--subtle);
+  pointer-events: none;
 }
 .search {
   width: 100%;
   min-height: 44px;
-  padding: 10px 14px 10px 42px;
+  padding: 10px 42px 10px 14px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
@@ -1196,7 +1197,6 @@ dialog::backdrop {
     padding-top: 24px;
     padding-bottom: var(--space-4);
   }
-  .stats,
   .capture-result-grid,
   .metric-grid,
   .metric-grid.compact,
@@ -1215,6 +1215,32 @@ dialog::backdrop {
   .dropzone {
     min-height: 104px;
     padding: var(--space-3);
+  }
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  .stat {
+    min-height: 88px;
+    padding: 12px;
+  }
+  .stat-label,
+  .stat small {
+    font-size: 11px;
+  }
+  .stat strong {
+    font-size: clamp(22px, 7vw, 28px);
+  }
+  .stat-icon {
+    right: 10px;
+    bottom: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+  }
+  .stat-icon svg {
+    width: 17px;
+    height: 17px;
   }
   .toolbar {
     align-items: stretch;
@@ -1276,21 +1302,27 @@ dialog::backdrop {
     border-radius: 14px;
   }
   .brand-logo { width: 74%; height: 74%; }
-  .stats,
   .capture-result-grid,
   .workspace,
   .trend-page {
     gap: var(--space-3);
   }
   .stat {
-    min-height: 100px;
-    padding: 12px;
+    min-height: 82px;
+    padding: 10px;
+  }
+  .stat strong {
+    font-size: clamp(20px, 6.6vw, 26px);
+  }
+  .stat-icon {
+    width: 28px;
+    height: 28px;
   }
   .import-panel {
     padding: var(--space-3);
   }
   .filter-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
