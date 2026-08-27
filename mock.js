@@ -94,35 +94,22 @@
     ],
     liveTrends: {
       daily: {
-        date: "今日",
-        revenue: 12860,
-        paidUsers: 42,
-        firstPaidUsers: 18,
-        sRevenueRate: 0.46,
-        potentialUsers: 27
+        date: "",
+        revenue: 0,
+        paidUsers: 0,
+        firstPaidUsers: 0,
+        sRevenueRate: 0,
+        potentialUsers: 0
       },
       weekly: {
-        revenue: 76420,
-        potentialUsers: 136,
-        trend: [
-          { label: "周一", revenue: 8600 },
-          { label: "周二", revenue: 11200 },
-          { label: "周三", revenue: 9800 },
-          { label: "周四", revenue: 13600 },
-          { label: "周五", revenue: 12680 },
-          { label: "周六", revenue: 15120 },
-          { label: "周日", revenue: 5420 }
-        ]
+        revenue: 0,
+        potentialUsers: 0,
+        trend: []
       },
       monthly: {
-        revenue: 318900,
-        potentialUsers: 528,
-        trend: [
-          { label: "第1周", revenue: 58200 },
-          { label: "第2周", revenue: 76420 },
-          { label: "第3周", revenue: 84600 },
-          { label: "第4周", revenue: 99680 }
-        ]
+        revenue: 0,
+        potentialUsers: 0,
+        trend: []
       }
     }
   };

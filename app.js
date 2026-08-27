@@ -1,5 +1,6 @@
 (function () {
   const STORAGE_KEY = "user_profile_notebook_v2";
+  const LIVE_SESSION_KEY = "user_profile_live_sessions_v1";
   const TREND_PLAN_KEY = "user_profile_trend_plan_v1";
   const cloudStore = window.UserAtlasCloudStore;
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -14,6 +15,7 @@
   const state = {
     users: [],
     trends: null,
+    liveSessions: [],
     activeView: "profiles",
     activeTier: "全部",
     search: "",
@@ -266,6 +268,24 @@
     }
   }
 
+  function loadLocalLiveSessions() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LIVE_SESSION_KEY));
+      if (Array.isArray(saved)) return saved;
+    } catch (error) {
+      console.warn("本地直播记录读取失败。", error);
+    }
+    return [];
+  }
+
+  function saveLocalLiveSessions() {
+    try {
+      localStorage.setItem(LIVE_SESSION_KEY, JSON.stringify(state.liveSessions || []));
+    } catch (error) {
+      console.warn("本地直播记录保存失败。", error);
+    }
+  }
+
   function escapeHTML(value = "") {
     return String(value).replace(/[&<>"']/g, (char) => ({
       "&": "&amp;",
@@ -356,7 +376,9 @@
   async function loadCloudData() {
     if (!state.cloudEnabled) {
       state.users = loadLocalUsers();
-      state.trends = window.NotebookMock.liveTrends;
+      state.liveSessions = loadLocalLiveSessions();
+      state.trends = buildTrendsFromLiveSessions(state.liveSessions);
+      syncTrendFiltersToLatestRecord();
       state.isLoading = false;
       renderAuthPanel();
       renderUsers();
@@ -369,7 +391,8 @@
       if (!session) {
         state.currentUser = null;
         state.users = [];
-        state.trends = window.NotebookMock.liveTrends;
+        state.liveSessions = [];
+        state.trends = emptyTrends();
         state.isLoading = false;
         renderAuthPanel();
         renderUsers();
@@ -380,6 +403,7 @@
       state.currentUser = await cloudStore.initCurrentUser();
       state.users = (await cloudStore.listUsers()).map(normalizeUser);
       await loadCloudTrends();
+      syncTrendFiltersToLatestRecord();
       state.isLoading = false;
       renderAuthPanel();
       renderUsers();
@@ -387,7 +411,9 @@
     } catch (error) {
       console.warn("云端数据加载失败。", error);
       state.users = loadLocalUsers();
-      state.trends = window.NotebookMock.liveTrends;
+      state.liveSessions = loadLocalLiveSessions();
+      state.trends = buildTrendsFromLiveSessions(state.liveSessions);
+      syncTrendFiltersToLatestRecord();
       state.isLoading = false;
       renderAuthPanel();
       renderUsers();
@@ -398,7 +424,8 @@
 
   async function loadCloudTrends() {
     if (!state.cloudEnabled || !state.currentUser) {
-      state.trends = window.NotebookMock.liveTrends;
+      state.liveSessions = loadLocalLiveSessions();
+      state.trends = buildTrendsFromLiveSessions(state.liveSessions);
       return;
     }
     try {
@@ -427,24 +454,24 @@
       }));
 
       state.trends = {
-        daily: dailyLatest || window.NotebookMock.liveTrends.daily,
+        daily: dailyLatest || emptyDailyTrend(toDateKey(new Date())),
         weekly: weekly.length ? {
           revenue: weekly.reduce((sum, item) => sum + item.revenue, 0),
           potentialUsers: weekly.reduce((sum, item) => sum + item.potentialUsers, 0),
           trend: weekly
-        } : window.NotebookMock.liveTrends.weekly,
+        } : { revenue: 0, potentialUsers: 0, trend: [] },
         monthly: monthly.length ? {
           revenue: monthly.reduce((sum, item) => sum + item.revenue, 0),
           potentialUsers: monthly.reduce((sum, item) => sum + item.potentialUsers, 0),
           trend: monthly
-        } : window.NotebookMock.liveTrends.monthly,
+        } : { revenue: 0, potentialUsers: 0, trend: [] },
         dailyHistory,
         weeklyHistory: weekly,
         monthlyHistory: monthly
       };
     } catch (error) {
       console.warn("直播趋势加载失败。", error);
-      state.trends = window.NotebookMock.liveTrends;
+      state.trends = emptyTrends();
     }
   }
 
@@ -533,7 +560,14 @@
   }
 
   function renderLineChart(data, chartId) {
-    const safeData = data.length ? data : [{ label: "暂无", revenue: 0 }];
+    if (!data.length) {
+      return `
+        <div class="empty trend-empty">
+          <p>暂无直播记录</p>
+          <small>上传或录入直播记录后，这里会自动生成趋势图。</small>
+        </div>`;
+    }
+    const safeData = data;
     const values = safeData.map((item) => item.revenue);
     const max = Math.max(...values);
     const min = Math.min(...values);
@@ -623,6 +657,129 @@
     };
   }
 
+  function emptyTrends(dateKey = toDateKey(new Date())) {
+    return {
+      daily: emptyDailyTrend(dateKey),
+      weekly: { revenue: 0, potentialUsers: 0, trend: [] },
+      monthly: { revenue: 0, potentialUsers: 0, trend: [] },
+      dailyHistory: [],
+      weeklyHistory: [],
+      monthlyHistory: []
+    };
+  }
+
+  function normalizeLiveSessionRecord(input = {}) {
+    const date = input.date || input.liveDate || input.live_date || toDateKey(new Date());
+    const revenue = toNumber(input.revenue ?? input.totalRevenue ?? input.total_revenue);
+    const paidUsers = toNumber(input.paidUsers ?? input.giftUsers ?? input.paid_user_count);
+    const firstPaidUsers = toNumber(input.firstPaidUsers ?? input.newGiftUsers ?? input.first_paid_user_count);
+    const potentialUsers = toNumber(input.potentialUsers ?? input.newPotentialUsers ?? input.new_potential_user_count ?? firstPaidUsers);
+    const sRevenue = toNumber(input.sRevenue ?? input.s_user_revenue);
+    return {
+      id: input.id || uid(),
+      date,
+      revenue,
+      paidUsers,
+      firstPaidUsers,
+      potentialUsers,
+      sRevenue,
+      topGift: input.topGift || input.top_gift || "",
+      score: toNumber(input.score),
+      rawText: input.rawText || input.raw_record_text || "",
+      createdAt: input.createdAt || input.created_at || new Date().toISOString()
+    };
+  }
+
+  function buildTrendsFromLiveSessions(sessions = []) {
+    const normalized = sessions
+      .map(normalizeLiveSessionRecord)
+      .filter((item) => item.date)
+      .sort((a, b) => new Date(b.date) - new Date(a.date) || new Date(b.createdAt) - new Date(a.createdAt));
+    const latestDate = normalized[0]?.date || toDateKey(new Date());
+    const dailyMap = new Map();
+
+    normalized.forEach((session) => {
+      const current = dailyMap.get(session.date) || {
+        date: session.date,
+        revenue: 0,
+        paidUsers: 0,
+        firstPaidUsers: 0,
+        sRevenue: 0,
+        potentialUsers: 0
+      };
+      current.revenue += session.revenue;
+      current.paidUsers += session.paidUsers;
+      current.firstPaidUsers += session.firstPaidUsers;
+      current.sRevenue += session.sRevenue;
+      current.potentialUsers += session.potentialUsers;
+      dailyMap.set(session.date, current);
+    });
+
+    const dailyHistory = [...dailyMap.values()]
+      .map((item) => ({
+        ...item,
+        sRevenueRate: item.revenue > 0 ? item.sRevenue / item.revenue : 0
+      }))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const weeklyMap = new Map();
+    dailyHistory.forEach((item) => {
+      const weekStart = toDateKey(startOfISOWeek(`${item.date}T00:00:00`));
+      const week = toWeekInputValue(`${item.date}T00:00:00`);
+      const current = weeklyMap.get(week) || {
+        week,
+        weekStart,
+        label: weekStart.slice(5),
+        revenue: 0,
+        potentialUsers: 0
+      };
+      current.revenue += item.revenue;
+      current.potentialUsers += item.potentialUsers;
+      weeklyMap.set(week, current);
+    });
+
+    const weeklyHistory = [...weeklyMap.values()].sort((a, b) => new Date(a.weekStart) - new Date(b.weekStart));
+    const monthlyMap = new Map();
+    dailyHistory.forEach((item) => {
+      const month = item.date.slice(0, 7);
+      const current = monthlyMap.get(month) || {
+        month,
+        label: month,
+        revenue: 0,
+        potentialUsers: 0
+      };
+      current.revenue += item.revenue;
+      current.potentialUsers += item.potentialUsers;
+      monthlyMap.set(month, current);
+    });
+    const monthlyHistory = [...monthlyMap.values()].sort((a, b) => a.month.localeCompare(b.month));
+
+    return {
+      daily: dailyHistory[0] || emptyDailyTrend(latestDate),
+      weekly: weeklyHistory.length ? {
+        revenue: weeklyHistory.reduce((sum, item) => sum + item.revenue, 0),
+        potentialUsers: weeklyHistory.reduce((sum, item) => sum + item.potentialUsers, 0),
+        trend: weeklyHistory
+      } : { revenue: 0, potentialUsers: 0, trend: [] },
+      monthly: monthlyHistory.length ? {
+        revenue: monthlyHistory.reduce((sum, item) => sum + item.revenue, 0),
+        potentialUsers: monthlyHistory.reduce((sum, item) => sum + item.potentialUsers, 0),
+        trend: monthlyHistory
+      } : { revenue: 0, potentialUsers: 0, trend: [] },
+      dailyHistory,
+      weeklyHistory,
+      monthlyHistory
+    };
+  }
+
+  function syncTrendFiltersToLatestRecord() {
+    const latestDate = state.trends?.dailyHistory?.[0]?.date;
+    if (!latestDate) return;
+    state.trendFilters.dailyDate = latestDate;
+    state.trendFilters.weeklyPeriod = toWeekInputValue(`${latestDate}T00:00:00`);
+    state.trendFilters.monthlyPeriod = latestDate.slice(0, 7);
+  }
+
   function getDailyTrend(trends, dateKey) {
     const history = Array.isArray(trends.dailyHistory) ? trends.dailyHistory : [];
     if (history.length) return history.find((item) => item.date === dateKey) || emptyDailyTrend(dateKey);
@@ -674,7 +831,7 @@
   }
 
   function renderTrends() {
-    const trends = state.trends || window.NotebookMock.liveTrends;
+    const trends = state.trends || emptyTrends();
     const dailyDate = state.trendFilters.dailyDate || toDateKey(new Date());
     const weeklyPeriod = state.trendFilters.weeklyPeriod || toWeekInputValue(new Date());
     const monthlyPeriod = state.trendFilters.monthlyPeriod || toMonthKey(new Date());
@@ -937,6 +1094,32 @@
     ].filter(Boolean).join("\n");
   }
 
+  async function persistLiveSession(summary, user, rawText, ocrText = "") {
+    const session = normalizeLiveSessionRecord({
+      date: summary.date,
+      revenue: summary.revenue,
+      paidUsers: summary.giftUsers,
+      firstPaidUsers: summary.newGiftUsers,
+      potentialUsers: summary.newGiftUsers,
+      sRevenue: user?.tier === "S" ? Number(user.latestSingleSpendAmount || user.amount || 0) : 0,
+      topGift: summary.topGift,
+      score: summary.score,
+      rawText,
+      ocrText
+    });
+
+    if (state.cloudEnabled && state.currentUser) {
+      await cloudStore.saveLiveSession(session);
+      await loadCloudTrends();
+    } else {
+      state.liveSessions = [session, ...(state.liveSessions || [])];
+      saveLocalLiveSessions();
+      state.trends = buildTrendsFromLiveSessions(state.liveSessions);
+    }
+    syncTrendFiltersToLatestRecord();
+    renderTrends();
+  }
+
   async function setSelectedImage(file) {
     if (!file || !file.type.startsWith("image/")) {
       showToast("请选择图片文件");
@@ -967,8 +1150,13 @@
       const current = $("#liveText").value.trim();
       $("#liveText").value = [current, result.data.text].filter(Boolean).join("\n");
       fillCaptureSummary(result.data.summary || {});
-      setImportStatus(`识别完成，置信度 ${Math.round(result.data.confidence * 100)}%。请检查字段后记录。`);
-      showToast("图片文字已识别");
+      if (result.data.confidence > 0) {
+        setImportStatus(`识别完成，置信度 ${Math.round(result.data.confidence * 100)}%。请检查字段后记录。`);
+        showToast("图片文字已识别");
+      } else {
+        setImportStatus("图片已接收。正式 OCR 接入前，请手动补充字段后记录。");
+        showToast("请手动补充直播数据");
+      }
     } catch (error) {
       setImportStatus(error.message || "图片识别失败，请改用文字录入。");
       showToast("图片识别失败");
@@ -1004,6 +1192,7 @@
       const result = await window.NotebookAPI.parseLiveText(text);
       if (result.code !== 0) throw new Error(result.message);
       fillCaptureSummary(result.data.liveSummary || {}, { onlyEmpty: true });
+      const liveSummary = collectCaptureSummary();
       const now = new Date().toISOString();
       const draft = normalizeUser({
         id: state.cloudEnabled && state.currentUser ? "" : uid(),
@@ -1023,7 +1212,9 @@
         }]
       }, { recalculateTier: true, tierSource: "system" });
       const saved = await persistUser(draft, null, "system");
-      state.users.unshift(normalizeUser(saved, { recalculateTier: true, tierSource: "system" }));
+      const normalizedSaved = normalizeUser(saved, { recalculateTier: true, tierSource: "system" });
+      state.users.unshift(normalizedSaved);
+      await persistLiveSession(liveSummary, normalizedSaved, text, result.data.text || "");
       if (!state.cloudEnabled) saveLocalUsers();
       resetImport();
       state.activeTier = "全部";

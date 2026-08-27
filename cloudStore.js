@@ -306,6 +306,29 @@
     };
   }
 
+  async function saveLiveSession(session) {
+    const authSession = await requireSession();
+    const payload = {
+      owner_id: authSession.user.id,
+      live_date: session.date || new Date().toISOString().slice(0, 10),
+      title: session.title || "",
+      total_revenue: toNumber(session.revenue),
+      paid_user_count: toNumber(session.paidUsers),
+      first_paid_user_count: toNumber(session.firstPaidUsers),
+      new_potential_user_count: toNumber(session.potentialUsers),
+      s_user_revenue: toNumber(session.sRevenue),
+      raw_record_text: session.rawText || "",
+      ocr_text: session.ocrText || ""
+    };
+    const { data, error } = await client
+      .from("live_sessions")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   async function writeTaggingLog(userId, oldTier, user, operatorType = user.tierSource || "manual") {
     const session = await requireSession();
     const safeOperatorType = operatorType === "system" ? "system" : "manual";
@@ -329,11 +352,11 @@
   }
 
   async function listTrends() {
-    await requireSession();
+    const session = await requireSession();
     const [daily, weekly, monthly] = await Promise.all([
-      client.from("live_daily_metrics").select("*").order("live_date", { ascending: false }).limit(30),
-      client.from("live_weekly_metrics").select("*").order("week_start_date", { ascending: true }).limit(12),
-      client.from("live_monthly_metrics").select("*").order("month_start_date", { ascending: true }).limit(12)
+      client.from("live_daily_metrics").select("*").eq("owner_id", session.user.id).order("live_date", { ascending: false }).limit(30),
+      client.from("live_weekly_metrics").select("*").eq("owner_id", session.user.id).order("week_start_date", { ascending: true }).limit(12),
+      client.from("live_monthly_metrics").select("*").eq("owner_id", session.user.id).order("month_start_date", { ascending: true }).limit(12)
     ]);
     if (daily.error) throw daily.error;
     if (weekly.error) throw weekly.error;
@@ -358,6 +381,7 @@
     saveUser,
     deleteUser,
     addInteraction,
+    saveLiveSession,
     listTrends
   };
 })();

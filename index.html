@@ -238,32 +238,7 @@
               <input id="dailyDate" type="date">
             </label>
           </div>
-          <div class="metric-grid metric-grid-five" id="dailyMetrics">
-      <article class="metric-card">
-        <span>日收入</span>
-        <strong>¥12,860</strong>
-        <small>2026-08-27 直播成交</small>
-      </article>
-      <article class="metric-card">
-        <span>支持用户数</span>
-        <strong>42 人</strong>
-        <small>完成支持的用户</small>
-      </article>
-      <article class="metric-card">
-        <span>首次支持用户</span>
-        <strong>18 人</strong>
-        <small>首次完成支持</small>
-      </article>
-      <article class="metric-card">
-        <span>S级用户支持率</span>
-        <strong>46%</strong>
-        <small>S级用户收入 / 总收入</small>
-      </article>
-      <article class="metric-card">
-        <span>新增潜力用户数</span>
-        <strong>27 人</strong>
-        <small>新增 A/B 潜力池</small>
-      </article></div>
+          <div class="metric-grid metric-grid-five" id="dailyMetrics"></div>
         </section>
 
         <section class="trend-columns">
@@ -278,57 +253,13 @@
                 <input id="weeklyPeriod" type="week">
               </label>
             </div>
-            <div class="metric-grid compact" id="weeklyMetrics">
-      <article class="metric-card">
-        <span>周收入</span>
-        <strong>¥76,420</strong>
-        <small>所选周累计</small>
-      </article>
-      <article class="metric-card">
-        <span>新增潜力用户数</span>
-        <strong>136 人</strong>
-        <small>所选周新增</small>
-      </article></div>
+            <div class="metric-grid compact" id="weeklyMetrics"></div>
             <div class="chart-card">
               <div class="chart-title">
                 <span>收入趋势图</span>
                 <small>近 7 天</small>
               </div>
-              <div id="weeklyChart">
-      <svg class="trend-chart" viewBox="0 0 640 220" role="img" aria-label="收入趋势图">
-        <defs>
-          <linearGradient id="weeklyRevenueGradient" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stop-color="#12b8c8" stop-opacity=".22"></stop>
-            <stop offset="100%" stop-color="#12b8c8" stop-opacity="0"></stop>
-          </linearGradient>
-        </defs>
-        <path class="chart-grid" d="M 24 28 H 616 M 24 105 H 616 M 24 182 H 616"></path>
-        <path class="chart-area" fill="url(#weeklyRevenueGradient)" d="M 24.0 131.5 L 122.7 90.2 L 221.3 112.5 L 320.0 52.1 L 418.7 66.7 L 517.3 28.0 L 616.0 182.0 L 616.0 182 L 24.0 182 Z"></path>
-        <path class="chart-line" d="M 24.0 131.5 L 122.7 90.2 L 221.3 112.5 L 320.0 52.1 L 418.7 66.7 L 517.3 28.0 L 616.0 182.0"></path>
-        
-          <circle class="chart-dot" cx="24.0" cy="131.5" r="4"></circle>
-          <text class="chart-label" x="24.0" y="206" text-anchor="middle">周一</text>
-        
-          <circle class="chart-dot" cx="122.7" cy="90.2" r="4"></circle>
-          <text class="chart-label" x="122.7" y="206" text-anchor="middle">周二</text>
-        
-          <circle class="chart-dot" cx="221.3" cy="112.5" r="4"></circle>
-          <text class="chart-label" x="221.3" y="206" text-anchor="middle">周三</text>
-        
-          <circle class="chart-dot" cx="320.0" cy="52.1" r="4"></circle>
-          <text class="chart-label" x="320.0" y="206" text-anchor="middle">周四</text>
-        
-          <circle class="chart-dot" cx="418.7" cy="66.7" r="4"></circle>
-          <text class="chart-label" x="418.7" y="206" text-anchor="middle">周五</text>
-        
-          <circle class="chart-dot" cx="517.3" cy="28.0" r="4"></circle>
-          <text class="chart-label" x="517.3" y="206" text-anchor="middle">周六</text>
-        
-          <circle class="chart-dot" cx="616.0" cy="182.0" r="4"></circle>
-          <text class="chart-label" x="616.0" y="206" text-anchor="middle">周日</text>
-        
-        <text class="chart-value" x="616.0" y="172.0" text-anchor="end">¥5,420</text>
-      </svg></div>
+              <div id="weeklyChart"></div>
             </div>
           </article>
 
@@ -343,48 +274,13 @@
                 <input id="monthlyPeriod" type="month">
               </label>
             </div>
-            <div class="metric-grid compact" id="monthlyMetrics">
-      <article class="metric-card">
-        <span>月收入</span>
-        <strong>¥318,900</strong>
-        <small>所选月累计</small>
-      </article>
-      <article class="metric-card">
-        <span>新增潜力用户数</span>
-        <strong>528 人</strong>
-        <small>所选月新增</small>
-      </article></div>
+            <div class="metric-grid compact" id="monthlyMetrics"></div>
             <div class="chart-card">
               <div class="chart-title">
                 <span>收入趋势图</span>
                 <small>近 4 周</small>
               </div>
-              <div id="monthlyChart">
-      <svg class="trend-chart" viewBox="0 0 640 220" role="img" aria-label="收入趋势图">
-        <defs>
-          <linearGradient id="monthlyRevenueGradient" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stop-color="#12b8c8" stop-opacity=".22"></stop>
-            <stop offset="100%" stop-color="#12b8c8" stop-opacity="0"></stop>
-          </linearGradient>
-        </defs>
-        <path class="chart-grid" d="M 24 28 H 616 M 24 105 H 616 M 24 182 H 616"></path>
-        <path class="chart-area" fill="url(#monthlyRevenueGradient)" d="M 24.0 182.0 L 221.3 114.4 L 418.7 84.0 L 616.0 28.0 L 616.0 182 L 24.0 182 Z"></path>
-        <path class="chart-line" d="M 24.0 182.0 L 221.3 114.4 L 418.7 84.0 L 616.0 28.0"></path>
-        
-          <circle class="chart-dot" cx="24.0" cy="182.0" r="4"></circle>
-          <text class="chart-label" x="24.0" y="206" text-anchor="middle">第1周</text>
-        
-          <circle class="chart-dot" cx="221.3" cy="114.4" r="4"></circle>
-          <text class="chart-label" x="221.3" y="206" text-anchor="middle">第2周</text>
-        
-          <circle class="chart-dot" cx="418.7" cy="84.0" r="4"></circle>
-          <text class="chart-label" x="418.7" y="206" text-anchor="middle">第3周</text>
-        
-          <circle class="chart-dot" cx="616.0" cy="28.0" r="4"></circle>
-          <text class="chart-label" x="616.0" y="206" text-anchor="middle">第4周</text>
-        
-        <text class="chart-value" x="616.0" y="18.0" text-anchor="end">¥99,680</text>
-      </svg></div>
+              <div id="monthlyChart"></div>
             </div>
           </article>
         </section>

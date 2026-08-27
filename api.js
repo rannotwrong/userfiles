@@ -72,7 +72,7 @@
     const revenueMatch = cleaned.match(/(?:总收入|本场收入|直播收入|收入)\s*[:：]?\s*[¥￥]?\s*(\d+(?:\.\d{1,2})?)/);
     const giftUsersMatch = cleaned.match(/(?:送礼人数|支持人数|送礼用户)\s*[:：]?\s*(\d+)/);
     const newGiftUsersMatch = cleaned.match(/(?:新用户送礼人数|新送礼用户|新用户支持人数)\s*[:：]?\s*(\d+)/);
-    const topGiftMatch = cleaned.match(/(?:最高价值礼物|最高礼物|最高价值)\s*[:：]?\s*([^，,。\n；;]{1,24})/);
+    const topGiftMatch = cleaned.match(/(?:最高价值礼物|最高礼物|最高价值)\s*[:：]?\s*([^，,。\n；;]+?)(?=\s*(日期|总收入|本场收入|直播收入|收入|送礼人数|支持人数|送礼用户|新用户送礼人数|新送礼用户|新用户支持人数|评分|直播评分|场次评分|$))/);
     const scoreMatch = cleaned.match(/(?:评分|直播评分|场次评分)\s*[:：]?\s*(\d+(?:\.\d{1,2})?)/);
     const normalizeDate = (value) => {
       if (!value) return "";
@@ -104,22 +104,21 @@
         await delay(160);
         onProgress?.(progress);
       }
-      const baseName = file.name.replace(/\.[^.]+$/, "").slice(0, 12);
       const today = new Date().toISOString().slice(0, 10);
       const summary = {
         date: today,
-        revenue: 12860,
-        giftUsers: 42,
-        newGiftUsers: 18,
-        topGift: "嘉年华",
-        score: 92
+        revenue: 0,
+        giftUsers: 0,
+        newGiftUsers: 0,
+        topGift: "",
+        score: 0
       };
       return {
         code: 0,
         data: {
-          text: `日期：${summary.date}\n本场总收入：${summary.revenue}\n送礼人数：${summary.giftUsers}\n新用户送礼人数：${summary.newGiftUsers}\n最高价值礼物：${summary.topGift}\n评分：${summary.score}\n昵称：${baseName || "直播用户"}\n支持率：35%\n总消费金额：5600\n单次消费：600\n出现次数：4\n愿意接话，直播间聊天积极`,
+          text: `日期：${summary.date}\n图片已上传，待接入正式 OCR 后自动识别文字。`,
           summary,
-          confidence: 0.91
+          confidence: 0
         }
       };
     },
