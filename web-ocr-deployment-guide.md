@@ -21,7 +21,7 @@ Web 端页面部署在 GitHub Pages，属于静态页面，不能直接保存或
 
 ```env
 ARK_API_KEY=你的火山方舟或豆包 API Key
-DOUBAO_VISION_MODEL=doubao-seed-2-1-pro-260628
+DOUBAO_VISION_MODEL=Doubao-Seed-1.6-vision
 OCR_PROXY_TOKEN=你自己设置的一串访问口令
 ALLOWED_ORIGINS=https://rannotwrong.github.io
 ```

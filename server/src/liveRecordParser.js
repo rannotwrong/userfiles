@@ -34,15 +34,17 @@ export function parseLiveRecordText(text = "") {
     /直播日期[:：\s]*([0-9]{4}[./\-年][0-9]{1,2}[./\-月][0-9]{1,2})/,
     /([0-9]{4}[./\-年][0-9]{1,2}[./\-月][0-9]{1,2})/
   ]);
+  const revenueText = firstMatch(source, [
+    /总收入[:：\s¥￥]*([0-9,，.]+)/,
+    /本场收入[:：\s¥￥]*([0-9,，.]+)/,
+    /直播收入[:：\s¥￥]*([0-9,，.]+)/,
+    /收入[:：\s¥￥]*([0-9,，.]+)/,
+    /视频号[\s\S]{0,24}热度[:：\s]*([0-9,，.]+)/
+  ]);
 
   return {
     date: normalizeDate(dateText),
-    revenue: toNumber(firstMatch(source, [
-      /总收入[:：\s¥￥]*([0-9,，.]+)/,
-      /本场收入[:：\s¥￥]*([0-9,，.]+)/,
-      /直播收入[:：\s¥￥]*([0-9,，.]+)/,
-      /收入[:：\s¥￥]*([0-9,，.]+)/
-    ])),
+    revenue: toNumber(revenueText),
     giftUsers: toInteger(firstMatch(source, [
       /送礼人数[:：\s]*([0-9]+)/,
       /支持人数[:：\s]*([0-9]+)/,

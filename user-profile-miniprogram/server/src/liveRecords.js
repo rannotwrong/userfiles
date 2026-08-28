@@ -29,14 +29,16 @@ export function parseLiveRecordText(text = "") {
     /([0-9]{4}[./-][0-9]{1,2}[./-][0-9]{1,2})/
   ]);
   const normalizedDate = dateText ? dateText.replace(/[.]/g, "-") : "";
+  const totalRevenueText = firstMatch(source, [
+    /总收入[:：\s¥￥]*([0-9,，.]+)/,
+    /本场收入[:：\s¥￥]*([0-9,，.]+)/,
+    /收入[:：\s¥￥]*([0-9,，.]+)/,
+    /视频号[\s\S]{0,24}热度[:：\s]*([0-9,，.]+)/
+  ]);
 
   return {
     date: normalizeDate(normalizedDate),
-    totalRevenue: toNumber(firstMatch(source, [
-      /总收入[:：\s¥￥]*([0-9,，.]+)/,
-      /本场收入[:：\s¥￥]*([0-9,，.]+)/,
-      /收入[:：\s¥￥]*([0-9,，.]+)/
-    ])),
+    totalRevenue: toNumber(totalRevenueText),
     giftUserCount: toInteger(firstMatch(source, [
       /送礼人数[:：\s]*([0-9]+)/,
       /支持人数[:：\s]*([0-9]+)/

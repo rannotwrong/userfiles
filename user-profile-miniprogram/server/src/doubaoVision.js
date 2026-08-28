@@ -1,7 +1,7 @@
 import { parseLiveRecordText } from "./liveRecords.js";
 
 const ARK_API_URL = "https://ark.cn-beijing.volces.com/api/v3/responses";
-const DEFAULT_MODEL = "doubao-seed-2-1-pro-260628";
+const DEFAULT_MODEL = "Doubao-Seed-1.6-vision";
 
 function normalizeBase64Image(imageBase64, mimeType = "image/png") {
   const value = String(imageBase64 || "").trim();
@@ -88,6 +88,8 @@ export async function recognizeLiveRecordImageWithDoubao({ imageBase64, mimeType
     "JSON 字段固定为：",
     "{\"date\":\"YYYY-MM-DD\",\"totalRevenue\":0,\"giftUserCount\":0,\"newGiftUserCount\":0,\"topGift\":\"\",\"score\":0,\"ocrText\":\"\",\"confidence\":0.0}",
     "字段说明：date 为直播日期；totalRevenue 为本场总收入数字；giftUserCount 为送礼/支持人数；newGiftUserCount 为新用户送礼人数；topGift 为最高价值礼物名称；score 为 0-100 分；ocrText 为可追溯的识别文字摘要。",
+    "识别规则：收入必须来自截图中明确的收入、流水、礼物价值或音浪等字段，不能用人气、观看人数推算；普通平台的热度只能作为 score 的辅助依据。",
+    "视频号特殊规则：如果截图明确来自视频号，并且没有音浪字段，则把视频号热度按音浪处理，可进入 totalRevenue 字段；不要把其他平台热度套用为音浪。",
     "如果图片中没有某项信息，用 0 或空字符串，不要编造。",
     text ? `用户补充描述：${text}` : ""
   ].filter(Boolean).join("\n");
