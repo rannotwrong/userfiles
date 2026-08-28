@@ -8,7 +8,7 @@
 - 新增和编辑用户档案
 - 记录单次互动并自动更新最近互动时间
 - 自动打标：根据支持率、消费金额、接话、目的性等规则计算 S/A/B/C 分层
-- 直播记录文字和图片识别模拟录入
+- 直播记录文字录入，以及通过服务端代理接入豆包的图片识别录入
 - 直播数据趋势：日、周、月收入和潜力用户趋势
 - 浏览器本地存储，无需后端即可使用
 
@@ -35,6 +35,16 @@ http://localhost:8765/index.html
 5. Branch 选择 `main`，目录选择 `/ (root)`。
 6. 保存后等待 GitHub Pages 发布完成。
 7. GitHub 会生成公开访问链接。
+
+## 豆包图片识别
+
+Web 端是 GitHub Pages 静态页面，不能直接放豆包 API Key。需要单独部署 `server/` 目录作为 OCR 代理服务，再在 `supabase-config.js` 中配置 `aiProxyUrl` 和 `aiProxyToken`。
+
+详细步骤见：
+
+```text
+web-ocr-deployment-guide.md
+```
 
 ## 入口文件
 
