@@ -1273,8 +1273,9 @@
         showToast("请手动补充直播数据");
       }
     } catch (error) {
-      setImportStatus(error.message || "图片识别失败，请改用文字录入。");
-      showToast("图片识别失败");
+      const message = error.message || "图片识别失败，请改用文字录入。";
+      setImportStatus(message);
+      showToast(message.slice(0, 28));
     } finally {
       button.disabled = false;
       button.textContent = originalText;

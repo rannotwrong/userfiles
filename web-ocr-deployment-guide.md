@@ -99,5 +99,6 @@ https://你的后端域名/api/health
 
 - 如果提示图片识别服务暂不可用：检查 `aiProxyUrl` 是否是 HTTPS 正式地址，且后端是否已启动。
 - 如果提示鉴权失败：检查前端 `aiProxyToken` 是否和服务端 `OCR_PROXY_TOKEN` 完全一致。
+- 如果提示“尚未开通模型”：进入火山方舟控制台开通 `DOUBAO_VISION_MODEL` 对应模型，或把该环境变量改成当前账号已开通的视觉模型 ID。
 - 如果豆包返回失败：检查 `ARK_API_KEY` 是否有效，以及 `DOUBAO_VISION_MODEL` 是否是已开通的视觉模型。
 - 如果浏览器控制台出现跨域错误：检查服务端 `ALLOWED_ORIGINS` 是否包含 `https://rannotwrong.github.io`。

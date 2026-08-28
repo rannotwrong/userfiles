@@ -77,6 +77,7 @@ export async function recognizeLiveImageWithDoubao({ imageBase64, mimeType, text
     "JSON 字段固定为：",
     "{\"date\":\"YYYY-MM-DD\",\"revenue\":0,\"giftUsers\":0,\"newGiftUsers\":0,\"topGift\":\"\",\"score\":0,\"userText\":\"\",\"confidence\":0.0}",
     "字段说明：date 为直播日期；revenue 为本场总收入数字；giftUsers 为送礼/支持人数；newGiftUsers 为新用户送礼人数；topGift 为最高价值礼物名称；score 为 0-100 分；userText 用自然语言总结可用于生成用户档案的信息。",
+    "识别规则：收入必须来自截图中明确的收入、流水、礼物价值或音浪等字段，不能用热度、人气、观看人数推算；热度、人气、观看人数只能作为 score 的辅助依据。",
     "如果图片中没有某项信息，用 0 或空字符串，不要编造。",
     text ? `用户补充描述：${text}` : ""
   ].filter(Boolean).join("\n");
@@ -109,7 +110,11 @@ export async function recognizeLiveImageWithDoubao({ imageBase64, mimeType, text
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error?.message || payload.message || "豆包图片识别失败。");
+    const message = payload.error?.message || payload.message || "豆包图片识别失败。";
+    if (/has not activated the model/i.test(message)) {
+      throw new Error(`当前火山方舟账号尚未开通模型 ${model}，请在方舟控制台开通该模型，或把 DOUBAO_VISION_MODEL 改成已开通的视觉模型 ID。`);
+    }
+    throw new Error(message);
   }
 
   const rawText = extractTextFromResponse(payload);

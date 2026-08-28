@@ -46,6 +46,12 @@ Web 端是 GitHub Pages 静态页面，不能直接放豆包 API Key。需要单
 web-ocr-deployment-guide.md
 ```
 
+直播截图字段提取、热度与收入关系、评分口径见：
+
+```text
+live-record-recognition-rules.md
+```
+
 ## 入口文件
 
 ```text
