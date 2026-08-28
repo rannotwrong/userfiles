@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: user-profile-notebook-ocr
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: ARK_API_KEY
+        sync: false
+      - key: DOUBAO_VISION_MODEL
+        value: doubao-seed-2-1-pro-260628
+      - key: OCR_PROXY_TOKEN
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://rannotwrong.github.io
