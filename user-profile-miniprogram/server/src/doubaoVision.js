@@ -1,7 +1,7 @@
 import { parseLiveRecordText } from "./liveRecords.js";
 
 const ARK_API_URL = "https://ark.cn-beijing.volces.com/api/v3/responses";
-const DEFAULT_MODEL = "Doubao-Seed-1.6-vision";
+const DEFAULT_MODEL = "doubao-seed-1-8-251228";
 
 function normalizeBase64Image(imageBase64, mimeType = "image/png") {
   const value = String(imageBase64 || "").trim();

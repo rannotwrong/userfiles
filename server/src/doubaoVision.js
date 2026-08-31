@@ -1,7 +1,7 @@
 import { mergeLiveSummary } from "./liveRecordParser.js";
 
 const ARK_API_URL = "https://ark.cn-beijing.volces.com/api/v3/responses";
-const DEFAULT_MODEL = "Doubao-Seed-1.6-vision";
+const DEFAULT_MODEL = "doubao-seed-1-8-251228";
 
 function normalizeBase64Image(imageBase64, mimeType = "image/png") {
   const value = String(imageBase64 || "").trim();
@@ -117,6 +117,9 @@ export async function recognizeLiveImageWithDoubao({ imageBase64, mimeType, text
     }
     if (/does not exist|do not have access/i.test(message)) {
       throw new Error(`当前模型 ID ${model} 不存在或无权访问。请在火山方舟控制台复制“接入点 ID / Endpoint ID”，不要只填写模型展示名称。`);
+    }
+    if (/api key format is incorrect/i.test(message)) {
+      throw new Error("Render 环境变量 ARK_API_KEY 不是有效的火山方舟 API Key 格式。请在火山方舟 API Key 管理页复制完整 Key，并更新 Render 的 ARK_API_KEY。");
     }
     throw new Error(message);
   }

@@ -12,7 +12,7 @@ services:
       - key: ARK_API_KEY
         sync: false
       - key: DOUBAO_VISION_MODEL
-        value: Doubao-Seed-1.6-vision
+        value: doubao-seed-1-8-251228
       - key: OCR_PROXY_TOKEN
         sync: false
       - key: ALLOWED_ORIGINS
