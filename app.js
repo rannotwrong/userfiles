@@ -9,6 +9,9 @@
 
   const ZODIAC_TAGS = ["白羊座", "金牛座", "双子座", "巨蟹座", "狮子座", "处女座", "天秤座", "天蝎座", "射手座", "摩羯座", "水瓶座", "双鱼座"];
   const AUTO_TAGS = ["高额支持", "稳定陪伴", "氛围带动", "点歌偏好", "情绪支持", "预算敏感", "新进观望", "潜水守候", "目的用户", ...ZODIAC_TAGS];
+  const HEAT_PER_CNY = 10;
+  const MIN_CONTRIBUTION_HEAT = 2000;
+  const MAX_LIVE_IMAGES = 2;
   const toNumber = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
   const toBoolean = (value, fallback = false) => typeof value === "boolean" ? value : fallback;
 
@@ -19,7 +22,9 @@
     activeView: "profiles",
     activeTier: "全部",
     search: "",
-    selectedImage: null,
+    selectedImages: [],
+    recognizedAudience: [],
+    recognitionDate: "",
     detailUserId: null,
     cloudEnabled: Boolean(cloudStore?.isConfigured),
     currentUser: null,
@@ -233,6 +238,7 @@
     const savedSnapshot = user.taggingSnapshot && typeof user.taggingSnapshot === "object" ? user.taggingSnapshot : {};
     const { recalculateTier = false, tierSource = user.tierSource || savedSnapshot.tierSource } = options;
     const birthday = Object.prototype.hasOwnProperty.call(user, "birthday") ? user.birthday : (savedSnapshot.birthday || "");
+    const audienceId = String(user.audienceId || savedSnapshot.audienceId || "").trim();
     const manualTags = Array.isArray(user.manualTags)
       ? user.manualTags
       : (Array.isArray(user.tags) ? user.tags.filter((tag) => !AUTO_TAGS.includes(tag)) : []);
@@ -257,6 +263,7 @@
       tierSource: finalTierSource,
       systemTier: classification.tier,
       birthday,
+      audienceId,
       manualTags,
       autoTags,
       tags: dedupe([...autoTags, ...manualTags]),
@@ -283,6 +290,7 @@
         systemTier: classification.tier,
         effectiveTier: finalTier,
         birthday,
+        audienceId,
         firstInteraction,
         createdVia: user.createdVia || savedSnapshot.createdVia || "manual",
         maxSingleSpendAmount: metrics.maxSingleSpendAmount
@@ -1085,13 +1093,13 @@
     $("#captureDate").value = toDateKey(new Date());
     $("#captureRevenue").value = 0;
     $("#captureGiftUsers").value = 0;
-    $("#captureNewGiftUsers").value = 0;
     $("#captureTopGift").value = "";
-    $("#captureScore").value = 0;
     $("#imageInput").value = "";
     $("#recognizeProgress").hidden = true;
     $("#progressBar").style.width = "0";
-    state.selectedImage = null;
+    state.selectedImages = [];
+    state.recognizedAudience = [];
+    state.recognitionDate = "";
   }
 
   function setImportStatus(message) {
@@ -1104,9 +1112,9 @@
       date: $("#captureDate").value || toDateKey(new Date()),
       revenue: toNumber($("#captureRevenue").value),
       giftUsers: toNumber($("#captureGiftUsers").value),
-      newGiftUsers: toNumber($("#captureNewGiftUsers").value),
       topGift: $("#captureTopGift").value.trim(),
-      score: toNumber($("#captureScore").value)
+      newGiftUsers: 0,
+      score: 0
     };
   }
 
@@ -1115,28 +1123,25 @@
       ["captureDate", summary.date],
       ["captureRevenue", summary.revenue],
       ["captureGiftUsers", summary.giftUsers],
-      ["captureNewGiftUsers", summary.newGiftUsers],
-      ["captureTopGift", summary.topGift],
-      ["captureScore", summary.score]
+      ["captureTopGift", summary.topGift]
     ];
     fields.forEach(([id, value]) => {
       if (value === undefined || value === null || value === "") return;
       const input = $(`#${id}`);
+      if (!input) return;
       if (onlyEmpty && input.value && Number(input.value) !== 0) return;
       input.value = value;
     });
   }
 
   function captureSummaryToText(summary = collectCaptureSummary()) {
-    const hasLiveData = summary.revenue || summary.giftUsers || summary.newGiftUsers || summary.topGift || summary.score;
+    const hasLiveData = summary.revenue || summary.giftUsers || summary.topGift;
     if (!hasLiveData) return "";
     return [
       summary.date ? `日期：${summary.date}` : "",
       summary.revenue ? `本场总收入：${summary.revenue}` : "",
       summary.giftUsers ? `送礼人数：${summary.giftUsers}` : "",
-      summary.newGiftUsers ? `新用户送礼人数：${summary.newGiftUsers}` : "",
-      summary.topGift ? `最高价值礼物：${summary.topGift}` : "",
-      summary.score ? `评分：${summary.score}` : ""
+      summary.topGift ? `最高价值礼物：${summary.topGift}` : ""
     ].filter(Boolean).join("\n");
   }
 
@@ -1144,6 +1149,162 @@
     const key = String(nickname || "").trim().toLowerCase();
     if (!key || key === "待确认用户") return null;
     return state.users.find((user) => String(user.nickname || "").trim().toLowerCase() === key) || null;
+  }
+
+  function audienceIdPrefix(value) {
+    return String(value || "").trim().toLowerCase().replace(/\s+/g, "").slice(0, 3);
+  }
+
+  function findUserByAudience(audience = {}) {
+    const prefix = audienceIdPrefix(audience.audienceId || audience.nickname);
+    if (!prefix) return null;
+    return state.users.find((user) => {
+      const storedId = user.audienceId || user.taggingSnapshot?.audienceId || user.nickname;
+      return audienceIdPrefix(storedId) === prefix;
+    }) || null;
+  }
+
+  function mergeRecognizedAudience(results = []) {
+    const merged = new Map();
+    results.flatMap((result) => result?.data?.audience || []).forEach((item = {}) => {
+      const audienceId = String(item.audienceId || "").trim();
+      const nickname = String(item.nickname || "").trim();
+      const key = audienceIdPrefix(audienceId || nickname);
+      if (!key) return;
+      const rank = Math.max(0, Math.trunc(toNumber(item.rank)));
+      const contributionHeat = Math.max(0, toNumber(item.contributionHeat));
+      const previous = merged.get(key);
+      merged.set(key, {
+        rank: previous?.rank && rank ? Math.min(previous.rank, rank) : (previous?.rank || rank),
+        audienceId: audienceId || previous?.audienceId || "",
+        nickname: nickname || previous?.nickname || "",
+        contributionHeat: Math.max(previous?.contributionHeat || 0, contributionHeat),
+        isFirstGift: Boolean(previous?.isFirstGift || item.isFirstGift)
+      });
+    });
+    return [...merged.values()]
+      .filter((item) => (!item.rank || item.rank <= 3) && item.contributionHeat > MIN_CONTRIBUTION_HEAT)
+      .sort((a, b) => a.rank && b.rank ? a.rank - b.rank : b.contributionHeat - a.contributionHeat)
+      .slice(0, 3);
+  }
+
+  function buildAudienceUserUpdate(audience, existing, date) {
+    const interactionDate = dateOnlyISOString(date || new Date());
+    const spendAmount = Math.round((toNumber(audience.contributionHeat) / HEAT_PER_CNY) * 100) / 100;
+    const interaction = {
+      time: interactionDate,
+      note: `直播榜单：贡献热度 ${audience.contributionHeat}，折合 ¥${spendAmount}`,
+      appeared: true,
+      supported: true,
+      spendAmount,
+      isFirstPaid: Boolean(audience.isFirstGift),
+      isWillingToReply: false,
+      hasOfflineMealRequest: false,
+      isOnlyRankAndChat: false,
+      topics: "直播榜单送礼",
+      remark: `榜单第 ${audience.rank || "?"} 名`,
+      rawText: `ID：${audience.audienceId || ""}；贡献热度：${audience.contributionHeat}`
+    };
+    const previousInteractions = Array.isArray(existing?.interactions) ? existing.interactions : [];
+    const user = normalizeUser({
+      ...(existing || {}),
+      id: existing?.id || (state.cloudEnabled && state.currentUser ? "" : uid()),
+      nickname: existing?.nickname || audience.nickname || audience.audienceId || "待确认用户",
+      audienceId: existing?.audienceId || audience.audienceId || "",
+      tier: existing?.tier || "C",
+      tierSource: "system",
+      manualTags: existing?.manualTags || [],
+      occupation: existing?.occupation || "",
+      interests: existing?.interests || "",
+      recentEvent: `本场贡献热度 ${audience.contributionHeat}`,
+      topics: existing?.topics || "由直播榜单自动更新",
+      maintenance: existing?.maintenance || "",
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      createdVia: existing ? (existing.createdVia || "manual") : "live_ranking",
+      firstInteraction: existing?.firstInteraction || interactionDate,
+      lastInteraction: interactionDate,
+      amount: toNumber(existing?.amount) + spendAmount,
+      totalLiveCount: toNumber(existing?.totalLiveCount) + 1,
+      appearedCount: toNumber(existing?.appearedCount) + 1,
+      supportedCount: toNumber(existing?.supportedCount) + 1,
+      latestSingleSpendAmount: spendAmount,
+      maxSingleSpendAmount: Math.max(toNumber(existing?.maxSingleSpendAmount), spendAmount),
+      highSingleSpendCount: toNumber(existing?.highSingleSpendCount) + (spendAmount > 1000 ? 1 : 0),
+      singleSpendOver200Count: toNumber(existing?.singleSpendOver200Count) + (spendAmount > 200 ? 1 : 0),
+      isWillingToReply: Boolean(existing?.isWillingToReply),
+      isNoPurpose: existing?.isNoPurpose !== false,
+      hasOfflineMealRequest: Boolean(existing?.hasOfflineMealRequest),
+      isOnlyRankAndChat: false,
+      interactions: [interaction, ...previousInteractions]
+    }, { recalculateTier: true, tierSource: "system" });
+    return { user, interaction, spendAmount };
+  }
+
+  async function processRecognizedAudience() {
+    const candidates = state.recognizedAudience;
+    if (!candidates.length) {
+      showToast("未发现前三名中贡献热度大于 2000 的观众");
+      setImportStatus("没有符合条件的观众，本次未保存任何截图数据。");
+      return false;
+    }
+
+    const processed = [];
+    let newUserCount = 0;
+    for (const audience of candidates) {
+      const existing = findUserByAudience(audience);
+      if (!existing || audience.isFirstGift) {
+        const name = audience.nickname || audience.audienceId || "未识别观众";
+        const message = existing
+          ? `${name}（ID：${audience.audienceId || "未识别"}）标记为首次送礼，已匹配档案“${existing.nickname}”。是否更新该档案？`
+          : `${name}（ID：${audience.audienceId || "未识别"}）贡献热度 ${audience.contributionHeat}，当前没有匹配档案。是否新增用户档案？`;
+        if (!window.confirm(message)) continue;
+      }
+
+      const { user: draft, interaction, spendAmount } = buildAudienceUserUpdate(
+        audience,
+        existing,
+        state.recognitionDate || $("#captureDate").value
+      );
+      let saved;
+      if (state.cloudEnabled && state.currentUser && existing) {
+        const result = await cloudStore.addInteraction(existing, interaction, draft);
+        saved = normalizeUser(result.user, { recalculateTier: true, tierSource: "system" });
+      } else {
+        saved = normalizeUser(
+          await persistUser(draft, existing?.tier || null, "system"),
+          { recalculateTier: true, tierSource: "system" }
+        );
+      }
+      state.users = existing
+        ? state.users.map((item) => item.id === existing.id ? saved : item)
+        : [saved, ...state.users];
+      if (!existing) newUserCount += 1;
+      processed.push({ audience, user: saved, spendAmount });
+    }
+
+    if (!processed.length) {
+      setImportStatus("你已取消所有待确认观众，本次未保存任何数据。");
+      return false;
+    }
+
+    const summary = {
+      date: state.recognitionDate || $("#captureDate").value || toDateKey(new Date()),
+      revenue: processed.reduce((sum, item) => sum + item.spendAmount, 0),
+      giftUsers: processed.length,
+      newGiftUsers: newUserCount,
+      topGift: "",
+      score: 0
+    };
+    const compactText = processed
+      .map(({ audience }) => `${audience.nickname || audience.audienceId}：热度 ${audience.contributionHeat}`)
+      .join("；");
+    await persistLiveSession(summary, processed[0]?.user, compactText, "");
+    if (!state.cloudEnabled) saveLocalUsers();
+    renderUsers();
+    setImportStatus(`已处理 ${processed.length} 位观众，其中新增 ${newUserCount} 个档案。`);
+    showToast(`直播榜单已更新 ${processed.length} 位用户`);
+    resetImport();
+    return true;
   }
 
   function buildLiveRecordUserUpdate(parsedUser, summary, rawText) {
@@ -1235,18 +1396,20 @@
     renderTrends();
   }
 
-  async function setSelectedImage(file) {
-    if (!file || !file.type.startsWith("image/")) {
+  async function setSelectedImages(files) {
+    const images = [...(files || [])].filter((file) => file?.type?.startsWith("image/"));
+    if (!images.length) {
       showToast("请选择图片文件");
       return;
     }
-    state.selectedImage = file;
-    await recognizeImage();
+    state.selectedImages = images.slice(0, MAX_LIVE_IMAGES);
+    if (images.length > MAX_LIVE_IMAGES) showToast("最多识别两张图片，已自动取前两张");
+    await recognizeImages();
   }
 
-  async function recognizeImage() {
-    if (!state.selectedImage) {
-      showToast("请先选择一张图片");
+  async function recognizeImages() {
+    if (!state.selectedImages.length) {
+      showToast("请先选择一至两张图片");
       return;
     }
     const button = $("#parseBtn");
@@ -1256,22 +1419,29 @@
     button.textContent = "识别中…";
     progress.hidden = false;
     $("#progressBar").style.width = "4%";
-    setImportStatus("正在识别图片文字和关键信息…");
+    setImportStatus(`正在识别 ${state.selectedImages.length} 张图片中的前三名观众…`);
 
     try {
-      const result = await window.NotebookAPI.recognizeLiveImage(state.selectedImage, (value) => {
-        $("#progressBar").style.width = `${value}%`;
-      });
-      const current = $("#liveText").value.trim();
-      $("#liveText").value = [current, result.data.text].filter(Boolean).join("\n");
-      fillCaptureSummary(result.data.summary || {});
-      if (result.data.confidence > 0) {
-        setImportStatus(`识别完成，置信度 ${Math.round(result.data.confidence * 100)}%。请检查字段后记录。`);
-        showToast("图片文字已识别");
-      } else {
-        setImportStatus("图片已接收。正式 OCR 接入前，请手动补充字段后记录。");
-        showToast("请手动补充直播数据");
-      }
+      const progressByImage = state.selectedImages.map(() => 0);
+      const results = await Promise.all(state.selectedImages.map((file, index) => (
+        window.NotebookAPI.recognizeLiveImage(file, (value) => {
+          progressByImage[index] = value;
+          const total = progressByImage.reduce((sum, item) => sum + item, 0) / progressByImage.length;
+          $("#progressBar").style.width = `${total}%`;
+        })
+      )));
+      state.recognizedAudience = mergeRecognizedAudience(results);
+      state.recognitionDate = results.map((result) => result?.data?.summary?.date).find(Boolean) || toDateKey(new Date());
+      $("#captureDate").value = state.recognitionDate;
+      $("#captureRevenue").value = state.recognizedAudience
+        .reduce((sum, item) => sum + item.contributionHeat / HEAT_PER_CNY, 0)
+        .toFixed(2);
+      $("#captureGiftUsers").value = state.recognizedAudience.length;
+      $("#liveText").value = state.recognizedAudience
+        .map((item) => `第${item.rank || "?"}名 ${item.nickname || item.audienceId}，ID：${item.audienceId || "未识别"}，贡献热度：${item.contributionHeat}${item.isFirstGift ? "，首次送礼" : ""}`)
+        .join("\n");
+      setImportStatus(`识别完成：找到 ${state.recognizedAudience.length} 位符合“前三名且热度大于 2000”的观众。点击“解析并记录”继续。`);
+      showToast(`已识别 ${state.recognizedAudience.length} 位符合条件的观众`);
     } catch (error) {
       const message = error.message || "图片识别失败，请改用文字录入。";
       setImportStatus(message);
@@ -1290,6 +1460,22 @@
     if (state.cloudEnabled && !state.currentUser) {
       showToast("请先登录云端账号");
       $("#authEmail").focus();
+      return;
+    }
+    if (state.recognizedAudience.length) {
+      const button = $("#parseBtn");
+      button.disabled = true;
+      button.textContent = "匹配档案中…";
+      try {
+        await processRecognizedAudience();
+      } catch (error) {
+        console.warn("直播榜单处理失败。", error);
+        setImportStatus(error.message || "榜单处理失败，请稍后重试。");
+        showToast("直播榜单处理失败");
+      } finally {
+        button.disabled = false;
+        button.textContent = "解析并记录";
+      }
       return;
     }
     const descriptionText = $("#liveText").value.trim();
@@ -1482,6 +1668,7 @@
       const user = normalizeUser({
         id: id || (state.cloudEnabled && state.currentUser ? "" : uid()),
         nickname,
+        audienceId: existing?.audienceId || "",
         level: existing?.level || "",
         tier: manualTier,
         tierSource: "manual",
@@ -1603,7 +1790,7 @@
       });
     });
 
-    $("#imageInput").addEventListener("change", (event) => setSelectedImage(event.target.files[0]));
+    $("#imageInput").addEventListener("change", (event) => setSelectedImages(event.target.files));
     const dropzone = $("#dropzone");
     ["dragenter", "dragover"].forEach((type) => {
       dropzone.addEventListener(type, (event) => {
@@ -1617,7 +1804,7 @@
         dropzone.classList.remove("dragging");
       });
     });
-    dropzone.addEventListener("drop", (event) => setSelectedImage(event.dataTransfer.files[0]));
+    dropzone.addEventListener("drop", (event) => setSelectedImages(event.dataTransfer.files));
     $("#parseBtn").addEventListener("click", parseAndSave);
   }
 

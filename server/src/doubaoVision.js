@@ -42,19 +42,24 @@ function normalizeRecognitionPayload(json = {}, rawText = "") {
     topGift: json.topGift,
     score: json.score
   }, rawText);
+  const audience = (Array.isArray(json.audience) ? json.audience : [])
+    .map((item = {}) => ({
+      rank: Math.max(0, Math.trunc(Number(item.rank) || 0)),
+      audienceId: String(item.audienceId || item.userId || item.id || "").trim(),
+      nickname: String(item.nickname || item.name || "").trim(),
+      contributionHeat: Math.max(0, Number(item.contributionHeat ?? item.heat ?? item.contribution) || 0),
+      isFirstGift: Boolean(item.isFirstGift ?? item.firstGift ?? item.first_gift)
+    }))
+    .filter((item) => item.audienceId || item.nickname);
   const text = [
     summary.date ? `日期：${summary.date}` : "",
-    summary.revenue ? `本场总收入：${summary.revenue}` : "",
-    summary.giftUsers ? `送礼人数：${summary.giftUsers}` : "",
-    summary.newGiftUsers ? `新用户送礼人数：${summary.newGiftUsers}` : "",
-    summary.topGift ? `最高价值礼物：${summary.topGift}` : "",
-    summary.score ? `评分：${summary.score}` : "",
-    json.userText || rawText || ""
+    ...audience.map((item) => `第${item.rank || "?"}名：${item.nickname || item.audienceId}（ID：${item.audienceId || "未识别"}，贡献热度：${item.contributionHeat}${item.isFirstGift ? "，首次送礼" : ""}）`)
   ].filter(Boolean).join("\n");
 
   return {
     text,
     summary,
+    audience,
     confidence: Number.isFinite(Number(json.confidence)) ? Number(json.confidence) : 0.8,
     rawModelText: rawText
   };
@@ -73,13 +78,13 @@ export async function recognizeLiveImageWithDoubao({ imageBase64, mimeType, text
   }
 
   const prompt = [
-    "你是直播运营数据录入助手。请识别图片中的直播数据、聊天截图或后台截图，并只返回严格 JSON，不要输出 Markdown。",
+    "你是直播榜单识别助手。请识别图片中的送礼观众排行榜，并只返回严格 JSON，不要输出 Markdown。",
     "JSON 字段固定为：",
-    "{\"date\":\"YYYY-MM-DD\",\"revenue\":0,\"giftUsers\":0,\"newGiftUsers\":0,\"topGift\":\"\",\"score\":0,\"userText\":\"\",\"confidence\":0.0}",
-    "字段说明：date 为直播日期；revenue 为本场总收入数字；giftUsers 为送礼/支持人数；newGiftUsers 为新用户送礼人数；topGift 为最高价值礼物名称；score 为 0-100 分；userText 用自然语言总结可用于生成用户档案的信息。",
-    "识别规则：收入必须来自截图中明确的收入、流水、礼物价值或音浪等字段，不能用人气、观看人数推算；普通平台的热度只能作为 score 的辅助依据。",
-    "视频号特殊规则：如果截图明确来自视频号，并且没有音浪字段，则把视频号热度按音浪处理，可进入 revenue 字段；不要把其他平台热度套用为音浪。",
-    "如果图片中没有某项信息，用 0 或空字符串，不要编造。",
+    "{\"date\":\"YYYY-MM-DD\",\"audience\":[{\"rank\":1,\"audienceId\":\"\",\"nickname\":\"\",\"contributionHeat\":0,\"isFirstGift\":false}],\"confidence\":0.0}",
+    "字段说明：date 为直播日期；audience 只列截图中排行榜的观众；rank 为榜单名次；audienceId 为截图显示的用户 ID，保留原始字符；nickname 为昵称；contributionHeat 为该观众的贡献热度；isFirstGift 仅在截图明确出现“首次送礼、首送、新用户送礼”等标记时为 true。",
+    "只识别排名前三的观众。不要输出聊天内容、观看人数、总热度、评分、画像、标签或其它无关信息。",
+    "贡献热度必须对应到具体观众，不要把直播间总热度或人气填给某个观众。",
+    "如果某项看不清，用 0、空字符串或 false，不要编造。若没有排行榜，audience 返回空数组。",
     text ? `用户补充描述：${text}` : ""
   ].filter(Boolean).join("\n");
 

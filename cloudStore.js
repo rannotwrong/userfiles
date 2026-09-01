@@ -59,6 +59,7 @@
         systemTier: user.systemTier || user.taggingSnapshot?.systemTier || user.tier || "C",
         effectiveTier: user.tier || "C",
         birthday: user.birthday ?? user.taggingSnapshot?.birthday ?? "",
+        audienceId: user.audienceId || user.taggingSnapshot?.audienceId || "",
         firstInteraction: user.firstInteraction ?? user.taggingSnapshot?.firstInteraction ?? "",
         createdVia: user.createdVia || user.taggingSnapshot?.createdVia || "manual",
         maxSingleSpendAmount: toNumber(user.maxSingleSpendAmount ?? user.taggingSnapshot?.maxSingleSpendAmount)
@@ -99,6 +100,7 @@
       tierSource: row.tagging_snapshot?.tierSource || "manual",
       systemTier: row.tagging_snapshot?.systemTier || row.tier || "C",
       birthday: row.tagging_snapshot?.birthday || "",
+      audienceId: row.tagging_snapshot?.audienceId || "",
       firstInteraction: row.tagging_snapshot?.firstInteraction || "",
       createdVia: row.tagging_snapshot?.createdVia || "manual",
       maxSingleSpendAmount: toNumber(row.tagging_snapshot?.maxSingleSpendAmount ?? row.latest_single_spend_amount),
