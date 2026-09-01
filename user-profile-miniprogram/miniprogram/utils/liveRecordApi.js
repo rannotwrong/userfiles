@@ -30,6 +30,13 @@ function saveLiveRecord(record) {
   });
 }
 
+function deleteLiveRecord(id) {
+  return api.request({
+    url: `/api/live-records/${id}`,
+    method: "DELETE"
+  });
+}
+
 function fileToBase64(filePath) {
   return new Promise((resolve, reject) => {
     wx.getFileSystemManager().readFile({
@@ -45,12 +52,12 @@ function fileToBase64(filePath) {
   });
 }
 
-async function recognizeImageFile(filePath, text = "") {
+async function recognizeImageFile(filePath, text = "", mimeType = "image/png") {
   const imageBase64 = await fileToBase64(filePath);
   return recognizeLiveRecord({
     text,
     imageBase64,
-    mimeType: "image/png"
+    mimeType
   });
 }
 
@@ -58,6 +65,7 @@ module.exports = {
   listLiveRecords,
   recognizeLiveRecord,
   saveLiveRecord,
+  deleteLiveRecord,
   fileToBase64,
   recognizeImageFile
 };

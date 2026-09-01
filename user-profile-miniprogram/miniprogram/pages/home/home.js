@@ -84,6 +84,77 @@ function chooseImageFile() {
   });
 }
 
+function requirePrivacyAuthorization() {
+  if (!wx.requirePrivacyAuthorize) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    wx.requirePrivacyAuthorize({
+      success: resolve,
+      fail() {
+        reject(new Error("需要同意隐私保护指引后才能选择截图"));
+      }
+    });
+  });
+}
+
+function compressImageFile(filePath) {
+  if (!wx.compressImage) return Promise.resolve(filePath);
+  return new Promise((resolve, reject) => {
+    wx.compressImage({
+      src: filePath,
+      quality: 72,
+      compressedWidth: 1600,
+      success(result) {
+        resolve(result.tempFilePath || filePath);
+      },
+      fail(error) {
+        reject(new Error(error.errMsg || "压缩图片失败"));
+      }
+    });
+  });
+}
+
+function getFileSize(filePath) {
+  return new Promise((resolve, reject) => {
+    wx.getFileSystemManager().getFileInfo({
+      filePath,
+      success(result) {
+        resolve(Number(result.size || 0));
+      },
+      fail(error) {
+        reject(new Error(error.errMsg || "读取图片大小失败"));
+      }
+    });
+  });
+}
+
+function inferMimeType(filePath) {
+  const extension = String(filePath || "").split(".").pop().toLowerCase();
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "webp") return "image/webp";
+  return "image/png";
+}
+
+function confirmAction({ title, content, confirmText = "确认", confirmColor = "#d92d20" }) {
+  return new Promise((resolve) => {
+    wx.showModal({
+      title,
+      content,
+      confirmText,
+      confirmColor,
+      success(result) {
+        resolve(Boolean(result.confirm));
+      },
+      fail() {
+        resolve(false);
+      }
+    });
+  });
+}
+
+function recognizedValue(fields, key, fallback) {
+  return Object.prototype.hasOwnProperty.call(fields, key) ? fields[key] : fallback;
+}
+
 Page({
   data: {
     appVersion: config.appVersion,
@@ -336,6 +407,7 @@ Page({
 
   async chooseLiveImage() {
     try {
+      await requirePrivacyAuthorization();
       const result = await chooseImageFile();
       const file = result.tempFiles && result.tempFiles[0];
       if (!file) return;
@@ -346,9 +418,16 @@ Page({
         isRecognizing: true
       });
 
+      const compressedPath = await compressImageFile(file.tempFilePath);
+      const fileSize = await getFileSize(compressedPath);
+      if (fileSize > config.imageMaxBytes) {
+        throw new Error("图片压缩后仍超过 4MB，请裁剪后重试");
+      }
+
       const recognition = await liveRecordApi.recognizeImageFile(
-        file.tempFilePath,
-        this.data.captureDraft.sourceText
+        compressedPath,
+        this.data.captureDraft.sourceText,
+        inferMimeType(compressedPath)
       );
       this.applyRecognitionResult(recognition);
       wx.showToast({ title: "识别完成", icon: "success" });
@@ -389,12 +468,12 @@ Page({
     this.setData({
       captureDraft: {
         ...this.data.captureDraft,
-        date: fields.date || this.data.captureDraft.date,
-        totalRevenue: fields.totalRevenue || this.data.captureDraft.totalRevenue,
-        giftUserCount: fields.giftUserCount || this.data.captureDraft.giftUserCount,
-        newGiftUserCount: fields.newGiftUserCount || this.data.captureDraft.newGiftUserCount,
-        topGift: fields.topGift || this.data.captureDraft.topGift,
-        score: fields.score || this.data.captureDraft.score,
+        date: recognizedValue(fields, "date", this.data.captureDraft.date),
+        totalRevenue: recognizedValue(fields, "totalRevenue", this.data.captureDraft.totalRevenue),
+        giftUserCount: recognizedValue(fields, "giftUserCount", this.data.captureDraft.giftUserCount),
+        newGiftUserCount: recognizedValue(fields, "newGiftUserCount", this.data.captureDraft.newGiftUserCount),
+        topGift: recognizedValue(fields, "topGift", this.data.captureDraft.topGift),
+        score: recognizedValue(fields, "score", this.data.captureDraft.score),
         ocrText: recognition.ocrText || this.data.captureDraft.ocrText,
         recognitionPayload: {
           provider: recognition.provider || "unknown",
@@ -436,6 +515,88 @@ Page({
       });
     } finally {
       this.setData({ isSavingRecord: false });
+    }
+  },
+
+  async deleteProfile() {
+    const id = this.data.profileDraft.id;
+    if (!id) return;
+    const confirmed = await confirmAction({
+      title: "删除用户档案",
+      content: "删除后无法恢复；已关联的直播记录会保留，但不再关联该用户。"
+    });
+    if (!confirmed) return;
+
+    this.setData({ isSavingProfile: true });
+    try {
+      await audienceApi.deleteAudienceUser(id);
+      this.setData({ isProfileModalOpen: false });
+      wx.showToast({ title: "档案已删除", icon: "success" });
+      await Promise.all([this.loadAudienceUsers(), this.loadLiveRecords()]);
+    } catch (error) {
+      wx.showToast({ title: error.message || "删除失败", icon: "none" });
+    } finally {
+      this.setData({ isSavingProfile: false });
+    }
+  },
+
+  async deleteLiveRecord(event) {
+    const id = event.currentTarget.dataset.id;
+    const confirmed = await confirmAction({
+      title: "删除直播记录",
+      content: "这条直播记录删除后无法恢复。"
+    });
+    if (!confirmed) return;
+    try {
+      await liveRecordApi.deleteLiveRecord(id);
+      wx.showToast({ title: "记录已删除", icon: "success" });
+      await this.loadLiveRecords();
+    } catch (error) {
+      wx.showToast({ title: error.message || "删除失败", icon: "none" });
+    }
+  },
+
+  openUserAgreement() {
+    wx.navigateTo({ url: "/pages/legal/legal?type=agreement" });
+  },
+
+  openPrivacyContract() {
+    if (!wx.openPrivacyContract) {
+      wx.showToast({ title: "请升级微信后查看隐私保护指引", icon: "none" });
+      return;
+    }
+    wx.openPrivacyContract({
+      fail(error) {
+        wx.showToast({ title: error.errMsg || "隐私保护指引暂不可用", icon: "none" });
+      }
+    });
+  },
+
+  async deleteAccount() {
+    const firstConfirmed = await confirmAction({
+      title: "删除账号及全部数据",
+      content: "将永久删除全部用户档案和直播记录，此操作无法恢复。",
+      confirmText: "继续删除"
+    });
+    if (!firstConfirmed) return;
+    const finalConfirmed = await confirmAction({
+      title: "最后确认",
+      content: "确定永久删除当前账号及全部数据吗？",
+      confirmText: "永久删除"
+    });
+    if (!finalConfirmed) return;
+
+    wx.showLoading({ title: "正在删除", mask: true });
+    try {
+      await audienceApi.deleteAccount();
+      auth.clearSession();
+      getApp().globalData.user = null;
+      wx.hideLoading();
+      wx.showToast({ title: "账号已删除", icon: "success" });
+      setTimeout(() => wx.redirectTo({ url: "/pages/login/login" }), 600);
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: error.message || "删除账号失败", icon: "none" });
     }
   }
 });

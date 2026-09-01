@@ -10,5 +10,17 @@
     {{isLoggingIn ? "登录中…" : "微信一键登录"}}
   </button>
 
+  <view class="agreement-row">
+    <checkbox-group bindchange="handleAgreementChange">
+      <label class="agreement-check">
+        <checkbox value="accepted" checked="{{hasAcceptedTerms}}" color="#12b8c8" />
+        <text>我已阅读并同意</text>
+      </label>
+    </checkbox-group>
+    <button class="text-link" bindtap="openUserAgreement">《用户服务协议》</button>
+    <text>和</text>
+    <button class="text-link" bindtap="openPrivacyContract">《小程序隐私保护指引》</button>
+  </view>
+
   <text class="tip">登录状态默认保留 30 天。除非主动退出，否则下次打开会自动进入。</text>
 </view>

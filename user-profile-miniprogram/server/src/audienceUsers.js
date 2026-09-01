@@ -1,7 +1,7 @@
 const TIERS = new Set(["S", "A", "B", "C"]);
 
 function toNumber(value) {
-  const number = Number(value);
+  const number = Number(String(value ?? "").replace(/[¥￥,，]/g, ""));
   return Number.isFinite(number) ? number : 0;
 }
 
@@ -162,11 +162,18 @@ export function fromDbAudienceUser(row) {
 }
 
 export function validateAudienceUser(input = {}) {
-  if (!String(input.nickname || "").trim()) {
+  const nickname = String(input.nickname || "").trim();
+  if (!nickname) {
     return "昵称不能为空";
+  }
+  if (nickname.length > 60) {
+    return "昵称不能超过 60 个字符";
   }
   if (input.tier && !TIERS.has(input.tier)) {
     return "用户分层只能是 S、A、B、C";
+  }
+  if (String(input.notes || "").length > 2000) {
+    return "备注不能超过 2000 个字符";
   }
   return "";
 }

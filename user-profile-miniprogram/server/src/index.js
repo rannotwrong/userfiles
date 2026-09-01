@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { randomUUID } from "node:crypto";
 import { exchangeWechatCode } from "./wechat.js";
 import { createSessionToken, verifySessionToken } from "./session.js";
 import { supabase } from "./supabase.js";
@@ -20,9 +21,79 @@ import { recognizeLiveRecordImageWithDoubao } from "./doubaoVision.js";
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const allowedOrigins = String(process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((item) => item.trim())
+  .filter(Boolean);
 
-app.use(cors());
-app.use(express.json({ limit: "14mb" }));
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("当前来源不在允许列表中"));
+  }
+}));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "8mb" }));
+app.use((req, res, next) => {
+  req.requestId = req.get("x-request-id") || randomUUID();
+  res.set("x-request-id", req.requestId);
+  res.set("x-content-type-options", "nosniff");
+  res.set("referrer-policy", "no-referrer");
+  res.set("cache-control", "no-store");
+  next();
+});
+
+function createRateLimiter({ windowMs, max, message }) {
+  const attempts = new Map();
+  const cleanup = setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of attempts.entries()) {
+      if (value.resetAt <= now) attempts.delete(key);
+    }
+  }, windowMs);
+  cleanup.unref();
+
+  return (req, res, next) => {
+    const actor = req.currentUser?.id || req.get("x-wx-openid") || req.ip;
+    const key = `${actor}:${req.path}`;
+    const now = Date.now();
+    const current = attempts.get(key);
+    if (!current || current.resetAt <= now) {
+      attempts.set(key, { count: 1, resetAt: now + windowMs });
+      next();
+      return;
+    }
+    current.count += 1;
+    if (current.count > max) {
+      res.status(429).json({ message, requestId: req.requestId });
+      return;
+    }
+    next();
+  };
+}
+
+const loginRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.LOGIN_RATE_LIMIT || 30),
+  message: "登录请求过于频繁，请稍后再试"
+});
+const ocrRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.OCR_RATE_LIMIT || 20),
+  message: "图片识别请求过于频繁，请稍后再试"
+});
+
+function sendServerError(req, res, error, fallbackMessage) {
+  console.error(`[${req.requestId}]`, error);
+  res.status(500).json({
+    message: fallbackMessage,
+    requestId: req.requestId
+  });
+}
 
 function publicUser(row) {
   return {
@@ -104,7 +175,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "user-profile-miniprogram-server" });
 });
 
-app.post("/api/auth/wechat-login", async (req, res) => {
+app.post("/api/auth/wechat-login", loginRateLimit, async (req, res) => {
   try {
     const { code, appVersion, releaseChannel } = req.body || {};
     const wechatSession = await exchangeWechatCode(code);
@@ -122,7 +193,10 @@ app.post("/api/auth/wechat-login", async (req, res) => {
       user: publicUser(user)
     });
   } catch (error) {
-    res.status(400).json({ message: error.message || "微信登录失败" });
+    res.status(400).json({
+      message: error.message || "微信登录失败",
+      requestId: req.requestId
+    });
   }
 });
 
@@ -139,7 +213,8 @@ app.get("/api/audience-users", requireSession, async (req, res) => {
       .from("wechat_audience_users")
       .select("*")
       .eq("owner_id", req.currentUser.id)
-      .order("updated_at", { ascending: false });
+      .order("updated_at", { ascending: false })
+      .limit(500);
 
     if (tier && ["S", "A", "B", "C"].includes(tier)) {
       query = query.eq("tier", tier);
@@ -155,7 +230,7 @@ app.get("/api/audience-users", requireSession, async (req, res) => {
       users: (data || []).map(fromDbAudienceUser)
     });
   } catch (error) {
-    res.status(500).json({ message: error.message || "读取用户档案失败" });
+    sendServerError(req, res, error, "读取用户档案失败");
   }
 });
 
@@ -180,7 +255,7 @@ app.post("/api/audience-users", requireSession, async (req, res) => {
       user: fromDbAudienceUser(data)
     });
   } catch (error) {
-    res.status(500).json({ message: error.message || "新增用户档案失败" });
+    sendServerError(req, res, error, "新增用户档案失败");
   }
 });
 
@@ -228,7 +303,28 @@ app.patch("/api/audience-users/:id", requireSession, async (req, res) => {
       user: fromDbAudienceUser(data)
     });
   } catch (error) {
-    res.status(500).json({ message: error.message || "更新用户档案失败" });
+    sendServerError(req, res, error, "更新用户档案失败");
+  }
+});
+
+app.delete("/api/audience-users/:id", requireSession, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("wechat_audience_users")
+      .delete()
+      .eq("id", req.params.id)
+      .eq("owner_id", req.currentUser.id)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      res.status(404).json({ message: "用户档案不存在" });
+      return;
+    }
+    res.json({ ok: true });
+  } catch (error) {
+    sendServerError(req, res, error, "删除用户档案失败");
   }
 });
 
@@ -240,7 +336,8 @@ app.get("/api/live-records", requireSession, async (req, res) => {
       .select("*")
       .eq("owner_id", req.currentUser.id)
       .order("live_date", { ascending: false })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(100);
 
     if (startDate) query = query.gte("live_date", startDate);
     if (endDate) query = query.lte("live_date", endDate);
@@ -252,11 +349,11 @@ app.get("/api/live-records", requireSession, async (req, res) => {
       records: (data || []).map(fromDbLiveRecord)
     });
   } catch (error) {
-    res.status(500).json({ message: error.message || "读取直播记录失败" });
+    sendServerError(req, res, error, "读取直播记录失败");
   }
 });
 
-app.post("/api/live-records/ocr", requireSession, async (req, res) => {
+app.post("/api/live-records/ocr", requireSession, ocrRateLimit, async (req, res) => {
   try {
     const { text = "", imageBase64 = "", mimeType = "image/png" } = req.body || {};
 
@@ -285,7 +382,7 @@ app.post("/api/live-records/ocr", requireSession, async (req, res) => {
       message: "已根据文字描述提取关键信息。"
     });
   } catch (error) {
-    res.status(500).json({ message: error.message || "识别直播记录失败" });
+    sendServerError(req, res, error, "识别直播记录失败");
   }
 });
 
@@ -324,8 +421,63 @@ app.post("/api/live-records", requireSession, async (req, res) => {
       record: fromDbLiveRecord(data)
     });
   } catch (error) {
-    res.status(500).json({ message: error.message || "保存直播记录失败" });
+    sendServerError(req, res, error, "保存直播记录失败");
   }
+});
+
+app.delete("/api/live-records/:id", requireSession, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("wechat_live_records")
+      .delete()
+      .eq("id", req.params.id)
+      .eq("owner_id", req.currentUser.id)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      res.status(404).json({ message: "直播记录不存在" });
+      return;
+    }
+    res.json({ ok: true });
+  } catch (error) {
+    sendServerError(req, res, error, "删除直播记录失败");
+  }
+});
+
+app.delete("/api/account", requireSession, async (req, res) => {
+  try {
+    if (req.body?.confirmation !== "DELETE") {
+      res.status(400).json({ message: "请确认删除账号" });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("wechat_users")
+      .delete()
+      .eq("id", req.currentUser.id);
+    if (error) throw error;
+
+    res.json({ ok: true });
+  } catch (error) {
+    sendServerError(req, res, error, "删除账号失败");
+  }
+});
+
+app.use((error, req, res, _next) => {
+  if (error?.type === "entity.too.large") {
+    res.status(413).json({
+      message: "上传内容过大，请压缩图片后重试",
+      requestId: req.requestId
+    });
+    return;
+  }
+  if (error?.message === "当前来源不在允许列表中") {
+    res.status(403).json({ message: error.message, requestId: req.requestId });
+    return;
+  }
+  sendServerError(req, res, error, "服务暂时不可用");
 });
 
 app.listen(port, () => {

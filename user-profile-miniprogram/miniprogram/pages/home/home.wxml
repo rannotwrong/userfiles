@@ -81,6 +81,27 @@
     </view>
   </view>
 
+  <view class="card records-card">
+    <view class="section-head">
+      <view>
+        <text class="eyebrow">HISTORY</text>
+        <text class="section-title">最近直播记录</text>
+      </view>
+      <text class="record-count">{{liveRecords.length}} 条</text>
+    </view>
+    <view wx:if="{{liveRecords.length === 0}}" class="empty-state">还没有直播记录。</view>
+    <view wx:else class="record-list">
+      <view class="record-item" wx:for="{{liveRecords}}" wx:key="id">
+        <view class="record-main">
+          <text class="record-date">{{item.date}}</text>
+          <text class="record-meta">收入 ¥{{item.totalRevenue}} · 送礼 {{item.giftUserCount}} 人 · 评分 {{item.score}}</text>
+          <text wx:if="{{item.topGift}}" class="record-gift">最高礼物：{{item.topGift}}</text>
+        </view>
+        <button class="danger-link" data-id="{{item.id}}" bindtap="deleteLiveRecord">删除</button>
+      </view>
+    </view>
+  </view>
+
   <view class="card profile-card">
     <view class="section-head">
       <view>
@@ -183,7 +204,24 @@
         <textarea class="text-area small" value="{{profileDraft.notes}}" placeholder="记录偏好、互动边界或维护方式" data-field="notes" bindinput="handleProfileInput"></textarea>
       </view>
 
-      <button class="primary-btn save-profile-btn" loading="{{isSavingProfile}}" disabled="{{isSavingProfile}}" bindtap="submitProfile">保存档案</button>
+      <view class="modal-actions">
+        <button wx:if="{{profileDraft.id}}" class="danger-btn" loading="{{isSavingProfile}}" disabled="{{isSavingProfile}}" bindtap="deleteProfile">删除档案</button>
+        <button class="primary-btn save-profile-btn" loading="{{isSavingProfile}}" disabled="{{isSavingProfile}}" bindtap="submitProfile">保存档案</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="card account-card">
+    <view class="section-head compact-head">
+      <view>
+        <text class="eyebrow">PRIVACY &amp; ACCOUNT</text>
+        <text class="section-title">数据与账号</text>
+      </view>
+    </view>
+    <view class="account-links">
+      <button class="account-link" bindtap="openUserAgreement">用户服务协议</button>
+      <button class="account-link" bindtap="openPrivacyContract">小程序隐私保护指引</button>
+      <button class="account-link danger-text" bindtap="deleteAccount">删除账号及全部数据</button>
     </view>
   </view>
 </view>

@@ -77,7 +77,9 @@
 }
 
 .capture-card,
-.profile-card {
+.profile-card,
+.records-card,
+.account-card {
   padding: 32rpx;
 }
 
@@ -420,7 +422,120 @@
 
 .save-profile-btn {
   width: 100%;
+}
+
+.record-count {
+  color: #667085;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.record-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 22rpx 24rpx;
+  border: 1rpx solid #e3ebf5;
+  border-radius: 24rpx;
+  background: #fbfdff;
+}
+
+.record-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.record-date,
+.record-meta,
+.record-gift {
+  display: block;
+}
+
+.record-date {
+  color: #101828;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.record-meta,
+.record-gift {
   margin-top: 8rpx;
+  color: #667085;
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+
+.danger-link {
+  flex: 0 0 auto;
+  min-height: 60rpx;
+  padding: 0 18rpx;
+  border-radius: 18rpx;
+  color: #b42318;
+  background: #fff1f0;
+  font-size: 24rpx;
+  font-weight: 750;
+}
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 180rpx minmax(0, 1fr);
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+
+.danger-btn {
+  min-height: 92rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid #fecdca;
+  border-radius: 24rpx;
+  color: #b42318;
+  background: #fff6f5;
+  font-size: 28rpx;
+  font-weight: 750;
+}
+
+.compact-head {
+  margin-bottom: 16rpx;
+}
+
+.account-links {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-link {
+  min-height: 82rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  border-bottom: 1rpx solid #edf1f7;
+  border-radius: 0;
+  color: #344054;
+  background: transparent;
+  font-size: 27rpx;
+  font-weight: 700;
+  text-align: left;
+}
+
+.account-link::after {
+  border: 0;
+}
+
+.account-link:last-child {
+  border-bottom: 0;
+}
+
+.danger-text {
+  color: #b42318;
 }
 
 @media (max-width: 390px) {
@@ -438,6 +553,8 @@
 
   .capture-card,
   .profile-card,
+  .records-card,
+  .account-card,
   .modal-card {
     padding: 26rpx;
   }
@@ -457,6 +574,10 @@
   }
 
   .check-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-actions {
     grid-template-columns: 1fr;
   }
 

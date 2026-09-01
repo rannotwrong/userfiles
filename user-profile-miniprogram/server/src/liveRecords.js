@@ -93,8 +93,21 @@ export function fromDbLiveRecord(row) {
 }
 
 export function validateLiveRecord(input = {}) {
-  if (input.score !== undefined && (toInteger(input.score) < 0 || toInteger(input.score) > 100)) {
+  const score = Number(input.score);
+  if (input.score !== undefined && (!Number.isFinite(score) || score < 0 || score > 100)) {
     return "评分需要在 0 到 100 之间";
+  }
+  if (Number(input.totalRevenue || 0) < 0) {
+    return "总收入不能小于 0";
+  }
+  if (Number(input.giftUserCount || 0) < 0) {
+    return "送礼人数不能小于 0";
+  }
+  if (Number(input.newGiftUserCount || 0) < 0) {
+    return "新用户送礼人数不能小于 0";
+  }
+  if (String(input.sourceText || "").length > 10000) {
+    return "文字描述不能超过 10000 个字符";
   }
   return "";
 }

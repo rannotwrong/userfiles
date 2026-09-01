@@ -1,0 +1,24 @@
+<view class="legal-page">
+  <view class="legal-card">
+    <text class="legal-title">用户服务协议</text>
+    <text class="legal-date">更新日期：{{updatedAt}}</text>
+
+    <text class="legal-heading">一、服务说明</text>
+    <text class="legal-text">“用户日记”用于帮助使用者记录直播互动对象、直播数据及个人运营备注。使用者应确保其录入、上传和处理相关信息具有合法、正当的来源和必要权限。</text>
+
+    <text class="legal-heading">二、账号与数据</text>
+    <text class="legal-text">小程序使用微信身份识别账号。请妥善保管微信账号，不得利用本服务存储违法、有害、侵权或未经授权取得的内容。</text>
+
+    <text class="legal-heading">三、截图识别</text>
+    <text class="legal-text">上传的直播截图会被发送至服务端并调用图像识别服务提取信息。识别结果可能存在误差，保存前应由使用者人工核对。除排障所需的短期技术处理外，服务不主动长期保存原始截图。</text>
+
+    <text class="legal-heading">四、个人信息保护</text>
+    <text class="legal-text">使用者应避免录入与运营目的无关的敏感个人信息，不得将档案用于骚扰、歧视、欺诈或其他不当用途。具体处理规则以微信后台公示的《小程序隐私保护指引》为准。</text>
+
+    <text class="legal-heading">五、删除与退出</text>
+    <text class="legal-text">使用者可以删除单条档案、直播记录，或在“数据与账号”中删除账号及其全部小程序数据。删除后通常无法恢复，请谨慎操作。</text>
+
+    <text class="legal-heading">六、服务变更</text>
+    <text class="legal-text">为保障安全和改善体验，服务可能进行升级、维护或调整。重大变更会通过小程序页面或微信平台允许的方式提示。</text>
+  </view>
+</view>

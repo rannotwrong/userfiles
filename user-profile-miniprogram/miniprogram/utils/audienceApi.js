@@ -26,8 +26,25 @@ function updateAudienceUser(id, patch) {
   });
 }
 
+function deleteAudienceUser(id) {
+  return api.request({
+    url: `/api/audience-users/${id}`,
+    method: "DELETE"
+  });
+}
+
+function deleteAccount() {
+  return api.request({
+    url: "/api/account",
+    method: "DELETE",
+    data: { confirmation: "DELETE" }
+  });
+}
+
 module.exports = {
   listAudienceUsers,
   createAudienceUser,
-  updateAudienceUser
+  updateAudienceUser,
+  deleteAudienceUser,
+  deleteAccount
 };
