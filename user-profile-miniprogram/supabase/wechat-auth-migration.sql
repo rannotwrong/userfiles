@@ -150,3 +150,13 @@ on public.wechat_live_records
 for all
 using (false)
 with check (false);
+
+-- 仅允许服务端 service_role 通过 Supabase Data API 访问这些表。
+-- 不向 anon/authenticated 授权，小程序前端不能绕过后端直连业务数据。
+grant usage on schema public to service_role;
+revoke all privileges on table public.wechat_users from anon, authenticated;
+revoke all privileges on table public.wechat_audience_users from anon, authenticated;
+revoke all privileges on table public.wechat_live_records from anon, authenticated;
+grant all privileges on table public.wechat_users to service_role;
+grant all privileges on table public.wechat_audience_users to service_role;
+grant all privileges on table public.wechat_live_records to service_role;
