@@ -12,6 +12,7 @@
   const HEAT_PER_CNY = 10;
   const MIN_PROFILE_PROMPT_HEAT = 1000;
   const MAX_LIVE_IMAGES = 2;
+  const TIER_ORDER = { S: 0, A: 1, B: 2, C: 3 };
   const toNumber = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
   const toBoolean = (value, fallback = false) => typeof value === "boolean" ? value : fallback;
 
@@ -166,7 +167,7 @@
     const totalSpendFromLogs = spendAmounts.reduce((sum, value) => sum + value, 0);
     const latestSpendFromLogs = spendAmounts.find((value) => value > 0) || 0;
     const maxSpendFromLogs = spendAmounts.length ? Math.max(...spendAmounts) : 0;
-    const highSingleFromLogs = spendAmounts.filter((value) => value > 1000).length;
+    const highSingleFromLogs = spendAmounts.filter((value) => value >= 1000).length;
     const singleOver200FromLogs = spendAmounts.filter((value) => value > 200).length;
     const appearedCount = Math.max(toNumber(user.appearedCount), appearedFromLogs);
     const supportedCount = interactions.length ? supportedThisMonthFromLogs : toNumber(user.supportedCount);
@@ -238,20 +239,58 @@
     };
   }
 
-  function classifyTier(metrics) {
-    if (metrics.supportRate > 0.5 && metrics.totalSpendAmount > 10000 && metrics.isWillingToReply) {
-      return { tier: "S", rule: "S级：支持率 > 50%，总消费金额 > 10000，且愿意接话" };
+  function hasPurposeBrotherTag(user = {}) {
+    const tags = [
+      ...(Array.isArray(user.tags) ? user.tags : []),
+      ...(Array.isArray(user.manualTags) ? user.manualTags : []),
+      ...(Array.isArray(user.autoTags) ? user.autoTags : [])
+    ];
+    return tags.some((tag) => String(tag || "").trim() === "目的哥");
+  }
+
+  function classifyTier(metrics, user = {}) {
+    const isPurposeBrother = hasPurposeBrotherTag(user);
+    const hasSLevelSingleSpend = metrics.highSingleSpendCount >= 5;
+    const hasALevelSingleSpend = metrics.highSingleSpendCount >= 3 && metrics.highSingleSpendCount < 5;
+    const hasFanClubLevel10 = [
+      ...(Array.isArray(user.tags) ? user.tags : []),
+      ...(Array.isArray(user.manualTags) ? user.manualTags : []),
+      ...(Array.isArray(user.autoTags) ? user.autoTags : [])
+    ].some((tag) => String(tag || "").trim() === "粉丝团10级");
+
+    if (!isPurposeBrother) {
+      if (metrics.totalSpendAmount > 10000) {
+        return { tier: "S", rule: "S级：总消费金额 > 10000" };
+      }
+      if (hasSLevelSingleSpend) {
+        return { tier: "S", rule: "S级：单笔 ≥1000 元，且次数 ≥5 次" };
+      }
+      if (metrics.totalSpendAmount > 5000) {
+        return { tier: "A", rule: "A级：总消费金额 > 5000" };
+      }
+      if (hasALevelSingleSpend) {
+        return { tier: "A", rule: "A级：单笔 ≥1000 元，且次数 ≥3 次、<5 次" };
+      }
+      if (hasFanClubLevel10) {
+        return { tier: "A", rule: "A级：标签包括“粉丝团10级”" };
+      }
     }
-    const isA = (
-      metrics.totalSpendAmount > 5000 ||
-      (metrics.supportRate > 0.3 && metrics.maxSingleSpendAmount > 500) ||
-      metrics.highSingleSpendCount >= 3
-    ) && metrics.isNoPurpose;
-    if (isA) return { tier: "A", rule: "A级：满足金额/支持条件之一，且无目的" };
-    if (metrics.supportRate < 0.3 && metrics.singleSpendOver200Count >= 1 && metrics.appearedCount >= 3) {
-      return { tier: "B", rule: "B级：支持率 < 30%，单笔消费 > 200，且出现过 3 次及以上" };
+
+    if (metrics.totalSpendAmount > 1000) {
+      return {
+        tier: "B",
+        rule: isPurposeBrother ? "目的哥从B级开始评：总消费金额 > 1000" : "B级：总消费金额 > 1000"
+      };
     }
-    if (metrics.isOnlyRankAndChat) return { tier: "C", rule: "C级：每次只占榜和聊天" };
+    if (metrics.maxSingleSpendAmount >= 500) {
+      return {
+        tier: "B",
+        rule: isPurposeBrother ? "目的哥从B级开始评：单笔 ≥500 元" : "B级：单笔 ≥500 元"
+      };
+    }
+    if (metrics.totalSpendAmount > 500) {
+      return { tier: "C", rule: "C级：总消费金额 > 500" };
+    }
     return { tier: "C", rule: "默认C级：暂未满足 S/A/B，继续观察" };
   }
 
@@ -310,18 +349,18 @@
       ? user.manualTags
       : (Array.isArray(user.tags) ? user.tags.filter((tag) => !AUTO_TAGS.includes(tag)) : []);
     const metrics = getUserMetrics(user);
-    const classification = classifyTier(metrics);
+    const classificationContext = {
+      ...user,
+      birthday,
+      manualTags,
+      tags: Array.isArray(user.tags) ? user.tags : [],
+      autoTags: Array.isArray(user.autoTags) ? user.autoTags : []
+    };
+    const classification = classifyTier(metrics, classificationContext);
     const autoTags = inferAutoTags({ ...user, birthday }, metrics);
-    const finalTier = recalculateTier
-      ? classification.tier
-      : (user.tier || classification.tier);
-    const finalTierSource = recalculateTier ? "system" : (tierSource || user.tierSource || savedSnapshot.tierSource || "manual");
-    const matchedRules = recalculateTier
-      ? [classification.rule]
-      : [
-        `人工设定：${finalTier}级`,
-        `系统参考：${classification.rule}`
-      ];
+    const finalTier = classification.tier;
+    const finalTierSource = "system";
+    const matchedRules = [classification.rule];
     const firstInteraction = getFirstInteractionDate(user, savedSnapshot);
     const lastInteraction = getLatestInteractionDate(user);
     return {
@@ -631,7 +670,11 @@
     const filtered = state.users
       .filter((user) => state.activeTier === "全部" || user.tier === state.activeTier)
       .filter((user) => user.nickname.toLowerCase().includes(keyword))
-      .sort((a, b) => new Date(b.lastInteraction || 0) - new Date(a.lastInteraction || 0));
+      .sort((a, b) => {
+        const tierDiff = (TIER_ORDER[a.tier] ?? 99) - (TIER_ORDER[b.tier] ?? 99);
+        if (tierDiff) return tierDiff;
+        return new Date(b.lastInteraction || 0) - new Date(a.lastInteraction || 0);
+      });
 
     $("#resultCount").textContent = `${filtered.length} 位`;
     $("#userGrid").innerHTML = filtered.length
@@ -1257,11 +1300,11 @@
       ["近期事件", user.recentEvent || "未记录"],
       ["聊过的话题", user.topics || "未记录"],
       ["消费情况", `累计 ¥ ${Number(user.amount || 0).toLocaleString("zh-CN")}`],
-      ["分层来源", user.tierSource === "system" ? "系统根据直播互动自动判定" : "人工设定"],
+      ["分层来源", "系统按当前评级规则自动判定"],
       ["本月直播次数", `${metrics.totalLiveCount || 0} 次`],
       ["本月支持次数", `${metrics.supportedCount || 0} 次`],
       ["支持率", `${formatPercent(metrics.supportRate || 0)}（本月支持 ${metrics.supportedCount || 0} / 直播 ${metrics.totalLiveCount || 0}）`],
-      ["单次消费", `最近 ¥ ${Number(user.latestSingleSpendAmount || 0).toLocaleString("zh-CN")}；最高 ¥ ${Number(user.maxSingleSpendAmount || 0).toLocaleString("zh-CN")}；单笔 >1000 次数 ${user.highSingleSpendCount || 0}`],
+      ["单次消费", `最近 ¥ ${Number(user.latestSingleSpendAmount || 0).toLocaleString("zh-CN")}；最高 ¥ ${Number(user.maxSingleSpendAmount || 0).toLocaleString("zh-CN")}；单笔 ≥1000 次数 ${user.highSingleSpendCount || 0}`],
       ["行为字段", [
         user.isWillingToReply ? "愿意接话" : "未记录接话",
         user.isNoPurpose ? "无目的" : "有目的/需谨慎",
@@ -1439,7 +1482,7 @@
       summary.date ? `日期：${summary.date}` : "",
       summary.revenue ? `本场总收入：${summary.revenue}` : "",
       summary.giftUsers ? `送礼人数：${summary.giftUsers}` : "",
-      summary.thousandTicketUsers ? `榜单>1000人数：${summary.thousandTicketUsers}` : "",
+      summary.thousandTicketUsers ? `榜单≥1000人数：${summary.thousandTicketUsers}` : "",
       summary.sRevenueRate ? `S级用户支持率：${Math.round(summary.sRevenueRate * 1000) / 10}%` : ""
     ].filter(Boolean).join("\n");
   }
@@ -1536,7 +1579,7 @@
       supportedCount: toNumber(existing?.supportedCount) + 1,
       latestSingleSpendAmount: spendAmount,
       maxSingleSpendAmount: Math.max(toNumber(existing?.maxSingleSpendAmount), spendAmount),
-      highSingleSpendCount: toNumber(existing?.highSingleSpendCount) + (spendAmount > 1000 ? 1 : 0),
+      highSingleSpendCount: toNumber(existing?.highSingleSpendCount) + (spendAmount >= 1000 ? 1 : 0),
       singleSpendOver200Count: toNumber(existing?.singleSpendOver200Count) + (spendAmount > 200 ? 1 : 0),
       isWillingToReply: Boolean(existing?.isWillingToReply),
       isNoPurpose: existing?.isNoPurpose !== false,
@@ -1686,7 +1729,7 @@
       1. 累计消费金额：原累计消费金额 + 本次直播记录识别到的单次/本场消费金额。
       2. 本月支持次数：由本月互动记录中 supported=true 或 spendAmount>0 的次数自动计算。
       3. 最近单次消费：更新为本次直播记录识别到的消费金额。
-      4. 单笔 >1000 次数：原次数 + 本次消费金额是否 >1000。
+      4. 单笔 ≥1000 次数：原次数 + 本次消费金额是否 ≥1000。
       5. 单笔最高消费：取原最高单笔与本次消费金额的最大值。
       6. 首次互动时间：已有则保留，没有则使用本次直播记录日期。
       7. 最近互动时间：更新为本次直播记录日期。
@@ -1711,7 +1754,7 @@
       supportedCount: toNumber(existing?.supportedCount) + (supported ? 1 : 0),
       latestSingleSpendAmount: spendAmount,
       maxSingleSpendAmount: Math.max(toNumber(existing?.maxSingleSpendAmount), spendAmount),
-      highSingleSpendCount: toNumber(existing?.highSingleSpendCount) + (spendAmount > 1000 ? 1 : 0),
+      highSingleSpendCount: toNumber(existing?.highSingleSpendCount) + (spendAmount >= 1000 ? 1 : 0),
       singleSpendOver200Count: toNumber(existing?.singleSpendOver200Count) + (spendAmount > 200 ? 1 : 0),
       isWillingToReply: Boolean(existing?.isWillingToReply || parsedUser.isWillingToReply),
       isNoPurpose: Boolean(existing?.isNoPurpose !== false && parsedUser.isNoPurpose !== false),
@@ -2194,7 +2237,7 @@
         supportedCount: Number(user.supportedCount || 0) + (supported ? 1 : 0),
         latestSingleSpendAmount: spendAmount,
         maxSingleSpendAmount: Math.max(Number(user.maxSingleSpendAmount || 0), spendAmount),
-        highSingleSpendCount: Number(user.highSingleSpendCount || 0) + (spendAmount > 1000 ? 1 : 0),
+        highSingleSpendCount: Number(user.highSingleSpendCount || 0) + (spendAmount >= 1000 ? 1 : 0),
         singleSpendOver200Count: Number(user.singleSpendOver200Count || 0) + (spendAmount > 200 ? 1 : 0),
         isWillingToReply: Boolean(user.isWillingToReply || $("#interactionWilling").checked),
         isNoPurpose: Boolean(user.isNoPurpose !== false && !$("#interactionOffline").checked),

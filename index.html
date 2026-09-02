@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户日记">
   <title>用户日记 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260902-tier-rules">
+  <link rel="stylesheet" href="./styles.css?v=20260902-tier-rules-v2">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -192,47 +192,6 @@
         <small>换个筛选条件，或新增一位用户吧。</small>
       </div></div>
         </section>
-
-        <aside class="tier-rules-panel" aria-labelledby="tierRulesTitle">
-          <div class="rules-head">
-            <div>
-              <p class="section-kicker">TIER RULES</p>
-              <h2 id="tierRulesTitle">用户等级评级规则</h2>
-            </div>
-            <span class="rules-badge">自动参考</span>
-          </div>
-          <div class="rules-list">
-            <article class="rule-card rule-s">
-              <span class="tier tier-S">S</span>
-              <div>
-                <h3>S级 · 最高价值用户</h3>
-                <p>支持率 &gt; 50%，总支持金额 &gt; 10000，且愿意接话。</p>
-              </div>
-            </article>
-            <article class="rule-card rule-a">
-              <span class="tier tier-A">A</span>
-              <div>
-                <h3>A级 · 核心用户</h3>
-                <p>满足以下任一金额/支持条件，且无目的：总支持金额 &gt; 5000；或支持率 &gt; 30% 且单笔最高 &gt; 500；或单笔 &gt;1000 次数 ≥ 3。</p>
-              </div>
-            </article>
-            <article class="rule-card rule-b">
-              <span class="tier tier-B">B</span>
-              <div>
-                <h3>B级 · 高潜用户</h3>
-                <p>支持率 &lt; 30%，有过单笔 &gt; 200 的支持，且出现过 3 次及以上。</p>
-              </div>
-            </article>
-            <article class="rule-card rule-c">
-              <span class="tier tier-C">C</span>
-              <div>
-                <h3>C级 · 观察用户</h3>
-                <p>每次只占榜和聊天，或暂未满足 S/A/B 规则时，默认归入 C 级继续观察。</p>
-              </div>
-            </article>
-          </div>
-          <p class="rules-note">说明：新增或编辑档案时以人工选择为准；直播互动更新后，系统会按以上规则重新计算参考等级。</p>
-        </aside>
       </section>
 
       <section class="trend-page reveal reveal-3" data-view="live" aria-labelledby="trendTitle" hidden="">
@@ -462,7 +421,7 @@
             <p class="form-error" id="nicknameError"></p>
           </div>
           <div class="form-field">
-            <label class="field-label" for="tier">当前分层（人工优先）</label>
+            <label class="field-label" for="tier">当前分层（按规则自动更新）</label>
             <select id="tier">
               <option value="S">S · 最高价值用户</option>
               <option value="A">A · 核心用户</option>
@@ -555,7 +514,7 @@
             <input id="latestSingleSpendAmount" type="number" min="0" step="0.01" value="0">
           </div>
           <div class="form-field">
-            <label class="field-label" for="highSingleSpendCount">单笔 &gt;1000 次数</label>
+            <label class="field-label" for="highSingleSpendCount">单笔 ≥1000 次数</label>
             <input id="highSingleSpendCount" type="number" min="0" step="1" value="0">
           </div>
           <div class="form-field">
@@ -590,7 +549,7 @@
                 <span>只占榜和聊天</span>
               </label>
             </div>
-            <p class="hint">新增或编辑档案时以你选择的分层为准；后续新增直播互动时，系统才会按规则重新判定分层和标签。</p>
+            <p class="hint">保存后会根据总消费、单笔支持次数和标签自动判定分层；“目的哥”将从 B 级开始评。</p>
           </div>
           <div class="form-field full">
             <label class="field-label" for="maintenance">维护方式</label>
@@ -680,7 +639,7 @@
   <script src="./cloudStore.js?v=20260902-plan-date-ocr"></script>
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260902-ocr-under-10s"></script>
-  <script src="./app.js?v=20260902-monthly-live-count"></script>
+  <script src="./app.js?v=20260902-tier-rules-v2"></script>
 
 
 
