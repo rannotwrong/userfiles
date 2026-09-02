@@ -113,6 +113,10 @@
             <span>送礼人数</span>
             <input id="captureGiftUsers" type="number" min="0" step="1" value="0">
           </label>
+          <label class="capture-field">
+            <span>千票人数</span>
+            <input id="captureThousandTicketUsers" type="number" min="0" step="1" value="0">
+          </label>
           <label class="capture-field full">
             <span>最高价值礼物</span>
             <input id="captureTopGift" type="text" placeholder="如：嘉年华 / 守护礼盒">
@@ -127,7 +131,8 @@
             <textarea id="liveText" placeholder="例如：小满，支持率 35%，总消费金额 5600，单次消费 600，愿意接话，直播间聊天积极…"></textarea>
           </div>
           <div class="import-actions">
-            <button class="primary-btn" id="parseBtn" type="button">解析并记录</button>
+            <button class="secondary-btn" id="parseBtn" type="button">解析</button>
+            <button class="primary-btn" id="recordBtn" type="button" disabled>记录</button>
           </div>
         </div>
       </aside>
@@ -507,10 +512,11 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js?v=20260826-auth-stats"></script>
-  <script src="./cloudStore.js?v=20260901-ranking-import"></script>
+  <script src="./cloudStore.js?v=20260902-parse-record"></script>
   <script src="./mock.js?v=20260826-auth-stats"></script>
-  <script src="./api.js?v=20260901-ranking-import"></script>
-  <script src="./app.js?v=20260901-ranking-import"></script>
+  <script src="./api.js?v=20260902-parse-record"></script>
+  <script src="./app.js?v=20260902-parse-record"></script>
+
 
 
 

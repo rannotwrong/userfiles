@@ -50,6 +50,10 @@ export function parseLiveRecordText(text = "") {
       /支持人数[:：\s]*([0-9]+)/,
       /送礼用户[:：\s]*([0-9]+)/
     ])),
+    thousandTicketUsers: toInteger(firstMatch(source, [
+      /千票人数[:：\s]*([0-9]+)/,
+      /千票用户[:：\s]*([0-9]+)/
+    ])),
     newGiftUsers: toInteger(firstMatch(source, [
       /新用户送礼人数[:：\s]*([0-9]+)/,
       /新增送礼人数[:：\s]*([0-9]+)/,
@@ -73,6 +77,7 @@ export function mergeLiveSummary(primary = {}, fallbackText = "") {
     date: normalizeDate(primary.date || fallback.date),
     revenue: toNumber(primary.revenue ?? fallback.revenue),
     giftUsers: toInteger(primary.giftUsers ?? fallback.giftUsers),
+    thousandTicketUsers: toInteger(primary.thousandTicketUsers ?? fallback.thousandTicketUsers),
     newGiftUsers: toInteger(primary.newGiftUsers ?? fallback.newGiftUsers),
     topGift: String(primary.topGift || fallback.topGift || "").trim(),
     score: Math.min(100, toInteger(primary.score ?? fallback.score))

@@ -321,6 +321,9 @@
 
   async function saveLiveSession(session) {
     const authSession = await requireSession();
+    const thousandTicketText = toNumber(session.thousandTicketUsers) > 0
+      ? `千票人数：${toNumber(session.thousandTicketUsers)}`
+      : "";
     const payload = {
       owner_id: authSession.user.id,
       live_date: session.date || new Date().toISOString().slice(0, 10),
@@ -330,7 +333,7 @@
       first_paid_user_count: toNumber(session.firstPaidUsers),
       new_potential_user_count: toNumber(session.potentialUsers),
       s_user_revenue: toNumber(session.sRevenue),
-      raw_record_text: session.rawText || "",
+      raw_record_text: [session.rawText || "", thousandTicketText].filter(Boolean).join("\n"),
       ocr_text: session.ocrText || ""
     };
     const { data, error } = await client

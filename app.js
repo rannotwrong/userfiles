@@ -25,6 +25,7 @@
     selectedImages: [],
     recognizedAudience: [],
     recognitionDate: "",
+    hasParsedLiveCapture: false,
     detailUserId: null,
     cloudEnabled: Boolean(cloudStore?.isConfigured),
     currentUser: null,
@@ -724,6 +725,7 @@
     const paidUsers = toNumber(input.paidUsers ?? input.giftUsers ?? input.paid_user_count);
     const firstPaidUsers = toNumber(input.firstPaidUsers ?? input.newGiftUsers ?? input.first_paid_user_count);
     const potentialUsers = toNumber(input.potentialUsers ?? input.newPotentialUsers ?? input.new_potential_user_count ?? firstPaidUsers);
+    const thousandTicketUsers = toNumber(input.thousandTicketUsers ?? input.thousand_ticket_user_count);
     const sRevenue = toNumber(input.sRevenue ?? input.s_user_revenue);
     return {
       id: input.id || uid(),
@@ -732,6 +734,7 @@
       paidUsers,
       firstPaidUsers,
       potentialUsers,
+      thousandTicketUsers,
       sRevenue,
       topGift: input.topGift || input.top_gift || "",
       score: toNumber(input.score),
@@ -1093,6 +1096,7 @@
     $("#captureDate").value = toDateKey(new Date());
     $("#captureRevenue").value = 0;
     $("#captureGiftUsers").value = 0;
+    $("#captureThousandTicketUsers").value = 0;
     $("#captureTopGift").value = "";
     $("#imageInput").value = "";
     $("#recognizeProgress").hidden = true;
@@ -1100,6 +1104,8 @@
     state.selectedImages = [];
     state.recognizedAudience = [];
     state.recognitionDate = "";
+    state.hasParsedLiveCapture = false;
+    $("#recordBtn").disabled = true;
   }
 
   function setImportStatus(message) {
@@ -1112,6 +1118,7 @@
       date: $("#captureDate").value || toDateKey(new Date()),
       revenue: toNumber($("#captureRevenue").value),
       giftUsers: toNumber($("#captureGiftUsers").value),
+      thousandTicketUsers: toNumber($("#captureThousandTicketUsers").value),
       topGift: $("#captureTopGift").value.trim(),
       newGiftUsers: 0,
       score: 0
@@ -1123,6 +1130,7 @@
       ["captureDate", summary.date],
       ["captureRevenue", summary.revenue],
       ["captureGiftUsers", summary.giftUsers],
+      ["captureThousandTicketUsers", summary.thousandTicketUsers],
       ["captureTopGift", summary.topGift]
     ];
     fields.forEach(([id, value]) => {
@@ -1135,12 +1143,13 @@
   }
 
   function captureSummaryToText(summary = collectCaptureSummary()) {
-    const hasLiveData = summary.revenue || summary.giftUsers || summary.topGift;
+    const hasLiveData = summary.revenue || summary.giftUsers || summary.thousandTicketUsers || summary.topGift;
     if (!hasLiveData) return "";
     return [
       summary.date ? `日期：${summary.date}` : "",
       summary.revenue ? `本场总收入：${summary.revenue}` : "",
       summary.giftUsers ? `送礼人数：${summary.giftUsers}` : "",
+      summary.thousandTicketUsers ? `千票人数：${summary.thousandTicketUsers}` : "",
       summary.topGift ? `最高价值礼物：${summary.topGift}` : ""
     ].filter(Boolean).join("\n");
   }
@@ -1291,6 +1300,7 @@
       date: state.recognitionDate || $("#captureDate").value || toDateKey(new Date()),
       revenue: processed.reduce((sum, item) => sum + item.spendAmount, 0),
       giftUsers: processed.length,
+      thousandTicketUsers: toNumber($("#captureThousandTicketUsers").value),
       newGiftUsers: newUserCount,
       topGift: "",
       score: 0
@@ -1375,6 +1385,7 @@
       date: summary.date,
       revenue: summary.revenue,
       paidUsers: summary.giftUsers,
+      thousandTicketUsers: summary.thousandTicketUsers,
       firstPaidUsers: summary.newGiftUsers,
       potentialUsers: summary.newGiftUsers,
       sRevenue: user?.tier === "S" ? Number(user.latestSingleSpendAmount || user.amount || 0) : 0,
@@ -1403,8 +1414,17 @@
       return;
     }
     state.selectedImages = images.slice(0, MAX_LIVE_IMAGES);
+    state.recognizedAudience = [];
+    state.recognitionDate = "";
+    state.hasParsedLiveCapture = false;
+    $("#recordBtn").disabled = true;
+    $("#liveText").value = "";
+    $("#captureRevenue").value = 0;
+    $("#captureGiftUsers").value = 0;
+    $("#captureThousandTicketUsers").value = 0;
     if (images.length > MAX_LIVE_IMAGES) showToast("最多识别两张图片，已自动取前两张");
-    await recognizeImages();
+    setImportStatus(`已选择 ${state.selectedImages.length} 张图片，请点击“解析”。`);
+    showToast(`已选择 ${state.selectedImages.length} 张图片`);
   }
 
   async function recognizeImages() {
@@ -1432,17 +1452,33 @@
       )));
       state.recognizedAudience = mergeRecognizedAudience(results);
       state.recognitionDate = results.map((result) => result?.data?.summary?.date).find(Boolean) || toDateKey(new Date());
+      const reportedThousandTicketUsers = results
+        .map((result) => toNumber(result?.data?.summary?.thousandTicketUsers))
+        .filter((value) => value > 0);
+      const recognizedThousandTicketUsers = new Set(
+        results
+          .flatMap((result) => result?.data?.audience || [])
+          .filter((item) => toNumber(item.contributionHeat) >= 1000)
+          .map((item) => audienceIdPrefix(item.audienceId || item.nickname))
+          .filter(Boolean)
+      ).size;
+      const thousandTicketUsers = Math.max(0, recognizedThousandTicketUsers, ...reportedThousandTicketUsers);
       $("#captureDate").value = state.recognitionDate;
       $("#captureRevenue").value = state.recognizedAudience
         .reduce((sum, item) => sum + item.contributionHeat / HEAT_PER_CNY, 0)
         .toFixed(2);
       $("#captureGiftUsers").value = state.recognizedAudience.length;
+      $("#captureThousandTicketUsers").value = thousandTicketUsers;
       $("#liveText").value = state.recognizedAudience
         .map((item) => `第${item.rank || "?"}名 ${item.nickname || item.audienceId}，ID：${item.audienceId || "未识别"}，贡献热度：${item.contributionHeat}${item.isFirstGift ? "，首次送礼" : ""}`)
         .join("\n");
-      setImportStatus(`识别完成：找到 ${state.recognizedAudience.length} 位符合“前三名且热度大于 2000”的观众。点击“解析并记录”继续。`);
+      state.hasParsedLiveCapture = true;
+      $("#recordBtn").disabled = false;
+      setImportStatus(`解析完成：找到 ${state.recognizedAudience.length} 位符合条件的观众，千票人数 ${thousandTicketUsers}。确认后点击“记录”。`);
       showToast(`已识别 ${state.recognizedAudience.length} 位符合条件的观众`);
     } catch (error) {
+      state.hasParsedLiveCapture = false;
+      $("#recordBtn").disabled = true;
       const message = error.message || "图片识别失败，请改用文字录入。";
       setImportStatus(message);
       showToast(message.slice(0, 28));
@@ -1456,6 +1492,37 @@
     }
   }
 
+  async function parseCapture() {
+    if (state.selectedImages.length) {
+      await recognizeImages();
+      return;
+    }
+    const text = $("#liveText").value.trim();
+    if (!text) {
+      showToast("请先选择图片或填写文字");
+      return;
+    }
+    const button = $("#parseBtn");
+    button.disabled = true;
+    button.textContent = "解析中…";
+    try {
+      const result = await window.NotebookAPI.parseLiveText(text);
+      if (result.code !== 0) throw new Error(result.message);
+      fillCaptureSummary(result.data.liveSummary || {});
+      state.hasParsedLiveCapture = true;
+      $("#recordBtn").disabled = false;
+      setImportStatus("解析完成，请确认数据后点击“记录”。");
+    } catch (error) {
+      state.hasParsedLiveCapture = false;
+      $("#recordBtn").disabled = true;
+      setImportStatus(error.message || "解析失败，请检查内容后重试。");
+      showToast("直播记录解析失败");
+    } finally {
+      button.disabled = false;
+      button.textContent = "解析";
+    }
+  }
+
   async function parseAndSave() {
     if (state.cloudEnabled && !state.currentUser) {
       showToast("请先登录云端账号");
@@ -1463,7 +1530,7 @@
       return;
     }
     if (state.recognizedAudience.length) {
-      const button = $("#parseBtn");
+      const button = $("#recordBtn");
       button.disabled = true;
       button.textContent = "匹配档案中…";
       try {
@@ -1473,8 +1540,8 @@
         setImportStatus(error.message || "榜单处理失败，请稍后重试。");
         showToast("直播榜单处理失败");
       } finally {
-        button.disabled = false;
-        button.textContent = "解析并记录";
+        button.disabled = !state.hasParsedLiveCapture;
+        button.textContent = "记录";
       }
       return;
     }
@@ -1485,10 +1552,10 @@
       $("#liveText").focus();
       return;
     }
-    const button = $("#parseBtn");
+    const button = $("#recordBtn");
     button.disabled = true;
-    button.textContent = "解析中…";
-    setImportStatus("正在提取昵称、分层、标签与消费信息…");
+    button.textContent = "记录中…";
+    setImportStatus("正在保存直播数据并更新用户档案…");
 
     try {
       const result = await window.NotebookAPI.parseLiveText(text);
@@ -1516,8 +1583,8 @@
       setImportStatus(error.message || "解析失败，请检查文字后重试。");
       showToast("直播记录解析失败");
     } finally {
-      button.disabled = false;
-      button.textContent = "解析并记录";
+      button.disabled = !state.hasParsedLiveCapture;
+      button.textContent = "记录";
     }
   }
 
@@ -1805,7 +1872,8 @@
       });
     });
     dropzone.addEventListener("drop", (event) => setSelectedImages(event.dataTransfer.files));
-    $("#parseBtn").addEventListener("click", parseAndSave);
+    $("#parseBtn").addEventListener("click", parseCapture);
+    $("#recordBtn").addEventListener("click", parseAndSave);
   }
 
   async function init() {

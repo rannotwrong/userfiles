@@ -110,6 +110,7 @@
     const revenueMatch = cleaned.match(/(?:总收入|本场收入|直播收入|收入)\s*[:：]?\s*[¥￥]?\s*(\d+(?:\.\d{1,2})?)/);
     const videoChannelHeatMatch = cleaned.match(/(?:视频号)[\s\S]{0,24}(?:热度)\s*[:：]?\s*(\d+(?:\.\d{1,2})?)/);
     const giftUsersMatch = cleaned.match(/(?:送礼人数|支持人数|送礼用户)\s*[:：]?\s*(\d+)/);
+    const thousandTicketUsersMatch = cleaned.match(/(?:千票人数|千票用户)\s*[:：]?\s*(\d+)/);
     const newGiftUsersMatch = cleaned.match(/(?:新用户送礼人数|新送礼用户|新用户支持人数)\s*[:：]?\s*(\d+)/);
     const topGiftMatch = cleaned.match(/(?:最高价值礼物|最高礼物|最高价值)\s*[:：]?\s*([^，,。\n；;]+?)(?=\s*(日期|总收入|本场收入|直播收入|收入|送礼人数|支持人数|送礼用户|新用户送礼人数|新送礼用户|新用户支持人数|评分|直播评分|场次评分|$))/);
     const scoreMatch = cleaned.match(/(?:评分|直播评分|场次评分)\s*[:：]?\s*(\d+(?:\.\d{1,2})?)/);
@@ -122,6 +123,7 @@
       date: normalizeDate(dateMatch?.[1]),
       revenue: Number(revenueMatch?.[1] || videoChannelHeatMatch?.[1] || 0),
       giftUsers: Number(giftUsersMatch?.[1] || 0),
+      thousandTicketUsers: Number(thousandTicketUsersMatch?.[1] || 0),
       newGiftUsers: Number(newGiftUsersMatch?.[1] || 0),
       topGift: topGiftMatch?.[1]?.trim() || "",
       score: Number(scoreMatch?.[1] || 0)
