@@ -107,12 +107,12 @@
   function parseLiveSummary(text) {
     const cleaned = String(text || "");
     const dateMatch = cleaned.match(/(?:日期|时间|直播日期)\s*[:：]?\s*(\d{4}[-/.年]\d{1,2}[-/.月]\d{1,2})/);
-    const revenueMatch = cleaned.match(/(?:总收入|本场收入|直播收入|收入)\s*[:：]?\s*[¥￥]?\s*(\d+(?:\.\d{1,2})?)/);
-    const videoChannelHeatMatch = cleaned.match(/(?:视频号)[\s\S]{0,24}(?:热度)\s*[:：]?\s*(\d+(?:\.\d{1,2})?)/);
+    const revenueMatch = cleaned.match(/(?:总收入|本场收入|直播收入|收入)\s*[:：]?\s*[¥￥]?\s*([0-9,，]+(?:\.\d{1,2})?)/);
     const giftUsersMatch = cleaned.match(/(?:送礼人数|支持人数|送礼用户)\s*[:：]?\s*(\d+)/);
     const thousandTicketUsersMatch = cleaned.match(/(?:千票人数|千票用户)\s*[:：]?\s*(\d+)/);
+    const overThousandUsersMatch = cleaned.match(/(?:榜单\s*>\s*1000\s*人数)\s*[:：]?\s*(\d+)/);
+    const sRevenueRateMatch = cleaned.match(/(?:S级用户支持率|S率)\s*[:：]?\s*(\d+(?:\.\d{1,2})?)\s*%?/i);
     const newGiftUsersMatch = cleaned.match(/(?:新用户送礼人数|新送礼用户|新用户支持人数)\s*[:：]?\s*(\d+)/);
-    const topGiftMatch = cleaned.match(/(?:最高价值礼物|最高礼物|最高价值)\s*[:：]?\s*([^，,。\n；;]+?)(?=\s*(日期|总收入|本场收入|直播收入|收入|送礼人数|支持人数|送礼用户|新用户送礼人数|新送礼用户|新用户支持人数|评分|直播评分|场次评分|$))/);
     const scoreMatch = cleaned.match(/(?:评分|直播评分|场次评分)\s*[:：]?\s*(\d+(?:\.\d{1,2})?)/);
     const normalizeDate = (value) => {
       if (!value) return "";
@@ -121,11 +121,11 @@
     };
     return {
       date: normalizeDate(dateMatch?.[1]),
-      revenue: Number(revenueMatch?.[1] || videoChannelHeatMatch?.[1] || 0),
+      revenue: Number(String(revenueMatch?.[1] || 0).replace(/[,，]/g, "")),
       giftUsers: Number(giftUsersMatch?.[1] || 0),
-      thousandTicketUsers: Number(thousandTicketUsersMatch?.[1] || 0),
+      thousandTicketUsers: Number(thousandTicketUsersMatch?.[1] || overThousandUsersMatch?.[1] || 0),
       newGiftUsers: Number(newGiftUsersMatch?.[1] || 0),
-      topGift: topGiftMatch?.[1]?.trim() || "",
+      sRevenueRate: Math.max(0, Math.min(1, Number(sRevenueRateMatch?.[1] || 0) / 100)),
       score: Number(scoreMatch?.[1] || 0)
     };
   }
@@ -157,8 +157,9 @@
         date: today,
         revenue: 0,
         giftUsers: 0,
+        thousandTicketUsers: 0,
         newGiftUsers: 0,
-        topGift: "",
+        sRevenueRate: 0,
         score: 0
       };
       return {

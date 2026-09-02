@@ -33,7 +33,8 @@
     trendFilters: {
       dailyDate: toDateKey(new Date()),
       weeklyPeriod: toWeekInputValue(new Date()),
-      monthlyPeriod: toMonthKey(new Date())
+      monthlyPeriod: toMonthKey(new Date()),
+      monthPlanPeriod: toMonthKey(new Date())
     }
   };
 
@@ -101,6 +102,28 @@
     const week = Number(match[2]);
     const firstWeekStart = startOfISOWeek(new Date(year, 0, 4));
     return addDays(firstWeekStart, (week - 1) * 7);
+  }
+
+  function formatChineseDate(value, includeYear = true) {
+    const dateKey = toDateKey(value);
+    if (!dateKey) return "";
+    const [year, month, day] = dateKey.split("-");
+    return includeYear ? `${year}/${month}/${day}` : `${month}/${day}`;
+  }
+
+  function formatChineseMonth(monthKey) {
+    const [year, month] = String(monthKey || "").split("-").map(Number);
+    return year && month ? `${year}年${month}月` : "";
+  }
+
+  function formatWeekRange(weekValue) {
+    const start = weekInputToStartDate(weekValue);
+    const end = addDays(start, 6);
+    return `${formatChineseDate(start, false)}-${formatChineseDate(end, false)}`;
+  }
+
+  function updateCaptureDateDisplay() {
+    $("#captureDateDisplay").textContent = formatChineseDate(`${$("#captureDate").value}T00:00:00`) || "请选择日期";
   }
 
   function splitTags(value = "") {
@@ -479,6 +502,15 @@
     }
     try {
       const trends = await cloudStore.listTrends();
+      const descriptionsByDate = (trends.sessions || []).reduce((map, item) => {
+        const description = String(item.raw_record_text || "").trim();
+        const isLegacyRankingText = /贡献热度[:：]?\s*\d+|ID[:：]|第\d+名/.test(description);
+        if (!description || isLegacyRankingText) return map;
+        const descriptions = map.get(item.live_date) || [];
+        if (!descriptions.includes(description)) descriptions.push(description);
+        map.set(item.live_date, descriptions);
+        return map;
+      }, new Map());
       const dailyHistory = trends.daily.map((item) => ({
         date: item.live_date,
         revenue: Number(item.daily_revenue || 0),
@@ -486,7 +518,8 @@
         firstPaidUsers: Number(item.first_paid_user_count || 0),
         thousandTicketUsers: Number(item.new_potential_user_count || 0),
         sRevenueRate: Number(item.s_user_revenue_rate || 0),
-        potentialUsers: Number(item.new_potential_user_count || 0)
+        potentialUsers: Number(item.new_potential_user_count || 0),
+        description: (descriptionsByDate.get(item.live_date) || []).join("\n")
       }));
       const dailyLatest = dailyHistory[0];
       const weekly = trends.weekly.map((item) => ({
@@ -671,30 +704,49 @@
       liveCount: toNumber(saved.liveCount),
       targetRevenue: toNumber(saved.targetRevenue),
       forecastRevenue: toNumber(saved.forecastRevenue),
-      actualRevenue: Object.prototype.hasOwnProperty.call(saved, "actualRevenue")
-        ? toNumber(saved.actualRevenue)
-        : toNumber(monthlyRevenue)
+      actualRevenue: toNumber(monthlyRevenue)
     };
   }
 
   function saveMonthPlan() {
-    const monthKey = state.trendFilters.monthlyPeriod || toMonthKey(new Date());
+    const monthKey = state.trendFilters.monthPlanPeriod || toMonthKey(new Date());
     const store = getTrendPlanStore();
     store[monthKey] = {
       liveCount: toNumber($("#monthLiveCount").value),
       targetRevenue: toNumber($("#monthTargetRevenue").value),
-      forecastRevenue: toNumber($("#monthForecastRevenue").value),
-      actualRevenue: toNumber($("#monthActualRevenue").value)
+      forecastRevenue: toNumber($("#monthForecastRevenue").value)
     };
     localStorage.setItem(TREND_PLAN_KEY, JSON.stringify(store));
+    renderMonthPlanStatus(getMonthPlan(monthKey, getMonthlyTrend(state.trends || emptyTrends(), monthKey).revenue), monthKey);
   }
 
   function renderMonthPlan(monthKey, monthlyRevenue) {
     const plan = getMonthPlan(monthKey, monthlyRevenue);
+    $("#monthPlanPeriod").value = monthKey;
+    $("#monthPlanTitle").textContent = `${formatChineseMonth(monthKey)}目标`;
     $("#monthLiveCount").value = plan.liveCount;
     $("#monthTargetRevenue").value = plan.targetRevenue;
     $("#monthForecastRevenue").value = plan.forecastRevenue;
     $("#monthActualRevenue").value = plan.actualRevenue;
+    renderMonthPlanStatus(plan, monthKey);
+  }
+
+  function renderMonthPlanStatus(plan = {}, monthKey = toMonthKey(new Date())) {
+    const status = $("#monthPlanStatus");
+    const targetRevenue = toNumber(plan.targetRevenue);
+    const actualRevenue = toNumber(plan.actualRevenue);
+    const currentMonth = toMonthKey(new Date());
+    let text = "进行中";
+    let value = "active";
+    if (targetRevenue > 0 && actualRevenue >= targetRevenue) {
+      text = "已达成";
+      value = "complete";
+    } else if (monthKey < currentMonth) {
+      text = "未达成";
+      value = "missed";
+    }
+    status.textContent = text;
+    status.dataset.status = value;
   }
 
   function emptyDailyTrend(dateKey) {
@@ -705,7 +757,8 @@
       firstPaidUsers: 0,
       thousandTicketUsers: 0,
       sRevenueRate: 0,
-      potentialUsers: 0
+      potentialUsers: 0,
+      description: ""
     };
   }
 
@@ -737,9 +790,9 @@
       potentialUsers,
       thousandTicketUsers,
       sRevenue,
-      topGift: input.topGift || input.top_gift || "",
       score: toNumber(input.score),
       rawText: input.rawText || input.raw_record_text || "",
+      description: input.description || input.rawText || input.raw_record_text || "",
       createdAt: input.createdAt || input.created_at || new Date().toISOString()
     };
   }
@@ -760,7 +813,8 @@
         firstPaidUsers: 0,
         thousandTicketUsers: 0,
         sRevenue: 0,
-        potentialUsers: 0
+        potentialUsers: 0,
+        descriptions: []
       };
       current.revenue += session.revenue;
       current.paidUsers += session.paidUsers;
@@ -768,13 +822,17 @@
       current.thousandTicketUsers += session.thousandTicketUsers || session.potentialUsers;
       current.sRevenue += session.sRevenue;
       current.potentialUsers += session.potentialUsers;
+      if (session.description && !current.descriptions.includes(session.description)) {
+        current.descriptions.push(session.description);
+      }
       dailyMap.set(session.date, current);
     });
 
     const dailyHistory = [...dailyMap.values()]
       .map((item) => ({
         ...item,
-        sRevenueRate: item.revenue > 0 ? item.sRevenue / item.revenue : 0
+        sRevenueRate: item.revenue > 0 ? item.sRevenue / item.revenue : 0,
+        description: item.descriptions.join("\n")
       }))
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -924,7 +982,7 @@
     $("#editDailyPaidUsers").value = toNumber(daily.paidUsers);
     $("#editDailyThousandUsers").value = toNumber(daily.thousandTicketUsers);
     $("#editDailySRate").value = Math.round(toNumber(daily.sRevenueRate) * 1000) / 10;
-    $("#editDailyFirstPaidUsers").value = toNumber(daily.firstPaidUsers);
+    $("#editDailyDescription").value = daily.description || "";
     $("#dailyMetrics").hidden = true;
     $("#editDailyBtn").hidden = true;
     $("#deleteDailyBtn").hidden = true;
@@ -937,7 +995,7 @@
       paidUsers: Math.max(0, Math.trunc(toNumber($("#editDailyPaidUsers").value))),
       thousandTicketUsers: Math.max(0, Math.trunc(toNumber($("#editDailyThousandUsers").value))),
       sRevenueRate: Math.max(0, Math.min(1, toNumber($("#editDailySRate").value) / 100)),
-      firstPaidUsers: Math.max(0, Math.trunc(toNumber($("#editDailyFirstPaidUsers").value)))
+      description: $("#editDailyDescription").value.trim()
     };
   }
 
@@ -963,12 +1021,13 @@
           date: dateKey,
           revenue: daily.revenue,
           paidUsers: daily.paidUsers,
-          firstPaidUsers: daily.firstPaidUsers,
+          firstPaidUsers: sameDate.reduce((sum, item) => sum + toNumber(item.firstPaidUsers), 0),
           thousandTicketUsers: daily.thousandTicketUsers,
           potentialUsers: daily.thousandTicketUsers,
           sRevenue: Math.round(daily.revenue * daily.sRevenueRate * 100) / 100,
           createdAt: sameDate[0]?.createdAt || new Date().toISOString(),
-          rawText: sameDate[0]?.rawText || "手动修改日维度数据"
+          rawText: daily.description,
+          description: daily.description
         });
         state.liveSessions = [
           replacement,
@@ -1034,14 +1093,21 @@
     $("#dailyDate").value = dailyDate;
     $("#weeklyPeriod").value = weeklyPeriod;
     $("#monthlyPeriod").value = monthlyPeriod;
-    renderMonthPlan(monthlyPeriod, monthly.revenue);
+    $("#dailyPeriodLabel").textContent = formatChineseDate(`${dailyDate}T00:00:00`);
+    $("#weeklyPeriodLabel").textContent = formatWeekRange(weeklyPeriod);
+    $("#dailyTrendTitle").textContent = `${formatChineseDate(`${dailyDate}T00:00:00`)}数据`;
+    $("#weeklyTrendTitle").textContent = `${formatWeekRange(weeklyPeriod)}周数据`;
+    $("#monthlyTrendTitle").textContent = `${formatChineseMonth(monthlyPeriod)}数据`;
+    const planMonth = state.trendFilters.monthPlanPeriod || toMonthKey(new Date());
+    const planMonthRevenue = getMonthlyTrend(trends, planMonth).revenue;
+    renderMonthPlan(planMonth, planMonthRevenue);
 
     $("#dailyMetrics").innerHTML = [
       metricCard("日收入", formatCurrency(daily.revenue)),
       metricCard("支持用户数", `${daily.paidUsers} 人`),
-      metricCard("千票用户数", `${daily.thousandTicketUsers || 0} 人`),
+      metricCard("榜单 >1000 人数", `${daily.thousandTicketUsers || 0} 人`),
       metricCard("S级用户支持率", formatPercent(daily.sRevenueRate)),
-      metricCard("首次送礼人数（千票）", `${daily.firstPaidUsers} 人`)
+      metricCard("直播描述", daily.description || "暂无描述")
     ].join("");
     $("#weeklyMetrics").innerHTML = [
       metricCard("周收入", formatCurrency(weekly.revenue)),
@@ -1233,10 +1299,11 @@
   function resetImport() {
     $("#liveText").value = "";
     $("#captureDate").value = toDateKey(new Date());
+    updateCaptureDateDisplay();
     $("#captureRevenue").value = 0;
     $("#captureGiftUsers").value = 0;
     $("#captureThousandTicketUsers").value = 0;
-    $("#captureTopGift").value = "";
+    $("#captureSRate").value = 0;
     $("#imageInput").value = "";
     $("#recognizeProgress").hidden = true;
     $("#progressBar").style.width = "0";
@@ -1258,7 +1325,7 @@
       revenue: toNumber($("#captureRevenue").value),
       giftUsers: toNumber($("#captureGiftUsers").value),
       thousandTicketUsers: toNumber($("#captureThousandTicketUsers").value),
-      topGift: $("#captureTopGift").value.trim(),
+      sRevenueRate: Math.max(0, Math.min(1, toNumber($("#captureSRate").value) / 100)),
       newGiftUsers: 0,
       score: 0
     };
@@ -1270,7 +1337,7 @@
       ["captureRevenue", summary.revenue],
       ["captureGiftUsers", summary.giftUsers],
       ["captureThousandTicketUsers", summary.thousandTicketUsers],
-      ["captureTopGift", summary.topGift]
+      ["captureSRate", summary.sRevenueRate === undefined ? undefined : toNumber(summary.sRevenueRate) * 100]
     ];
     fields.forEach(([id, value]) => {
       if (value === undefined || value === null || value === "") return;
@@ -1282,14 +1349,14 @@
   }
 
   function captureSummaryToText(summary = collectCaptureSummary()) {
-    const hasLiveData = summary.revenue || summary.giftUsers || summary.thousandTicketUsers || summary.topGift;
+    const hasLiveData = summary.revenue || summary.giftUsers || summary.thousandTicketUsers || summary.sRevenueRate;
     if (!hasLiveData) return "";
     return [
       summary.date ? `日期：${summary.date}` : "",
       summary.revenue ? `本场总收入：${summary.revenue}` : "",
       summary.giftUsers ? `送礼人数：${summary.giftUsers}` : "",
-      summary.thousandTicketUsers ? `千票人数：${summary.thousandTicketUsers}` : "",
-      summary.topGift ? `最高价值礼物：${summary.topGift}` : ""
+      summary.thousandTicketUsers ? `榜单>1000人数：${summary.thousandTicketUsers}` : "",
+      summary.sRevenueRate ? `S级用户支持率：${Math.round(summary.sRevenueRate * 1000) / 10}%` : ""
     ].filter(Boolean).join("\n");
   }
 
@@ -1312,12 +1379,22 @@
     }) || null;
   }
 
+  function findSUserByAudience(audience = {}) {
+    const nickname = String(audience.nickname || "").trim().toLowerCase();
+    const exactNameMatch = nickname
+      ? state.users.find((user) => user.tier === "S" && String(user.nickname || "").trim().toLowerCase() === nickname)
+      : null;
+    if (exactNameMatch) return exactNameMatch;
+    const matched = findUserByAudience(audience);
+    return matched?.tier === "S" ? matched : null;
+  }
+
   function mergeRecognizedAudience(results = []) {
     const merged = new Map();
     results.flatMap((result) => result?.data?.audience || []).forEach((item = {}) => {
       const audienceId = String(item.audienceId || "").trim();
       const nickname = String(item.nickname || "").trim();
-      const key = audienceIdPrefix(audienceId || nickname);
+      const key = String(audienceId || nickname).toLowerCase().replace(/\s+/g, "");
       if (!key) return;
       const rank = Math.max(0, Math.trunc(toNumber(item.rank)));
       const contributionHeat = Math.max(0, toNumber(item.contributionHeat));
@@ -1331,9 +1408,7 @@
       });
     });
     return [...merged.values()]
-      .filter((item) => (!item.rank || item.rank <= 3) && item.contributionHeat > MIN_CONTRIBUTION_HEAT)
-      .sort((a, b) => a.rank && b.rank ? a.rank - b.rank : b.contributionHeat - a.contributionHeat)
-      .slice(0, 3);
+      .sort((a, b) => a.rank && b.rank ? a.rank - b.rank : b.contributionHeat - a.contributionHeat);
   }
 
   function buildAudienceUserUpdate(audience, existing, date) {
@@ -1437,17 +1512,15 @@
 
     const summary = {
       date: state.recognitionDate || $("#captureDate").value || toDateKey(new Date()),
-      revenue: processed.reduce((sum, item) => sum + item.spendAmount, 0),
-      giftUsers: processed.length,
+      revenue: toNumber($("#captureRevenue").value),
+      giftUsers: toNumber($("#captureGiftUsers").value),
       thousandTicketUsers: toNumber($("#captureThousandTicketUsers").value),
       newGiftUsers: processed.filter(({ audience }) => audience.isFirstGift && audience.contributionHeat >= 1000).length,
-      topGift: "",
+      sRevenueRate: Math.max(0, Math.min(1, toNumber($("#captureSRate").value) / 100)),
       score: 0
     };
-    const compactText = processed
-      .map(({ audience }) => `${audience.nickname || audience.audienceId}：热度 ${audience.contributionHeat}`)
-      .join("；");
-    await persistLiveSession(summary, processed[0]?.user, compactText, "");
+    const description = $("#liveText").value.trim();
+    await persistLiveSession(summary, processed[0]?.user, description, "");
     if (!state.cloudEnabled) saveLocalUsers();
     renderUsers();
     setImportStatus(`已处理 ${processed.length} 位观众，其中新增 ${newUserCount} 个档案。`);
@@ -1527,10 +1600,10 @@
       thousandTicketUsers: summary.thousandTicketUsers,
       firstPaidUsers: summary.newGiftUsers,
       potentialUsers: summary.thousandTicketUsers,
-      sRevenue: user?.tier === "S" ? Number(user.latestSingleSpendAmount || user.amount || 0) : 0,
-      topGift: summary.topGift,
+      sRevenue: Math.round(toNumber(summary.revenue) * toNumber(summary.sRevenueRate) * 100) / 100,
       score: summary.score,
       rawText,
+      description: rawText,
       ocrText
     });
 
@@ -1589,31 +1662,44 @@
           $("#progressBar").style.width = `${total}%`;
         })
       )));
-      state.recognizedAudience = mergeRecognizedAudience(results);
+      const allRecognizedAudience = mergeRecognizedAudience(results);
+      state.recognizedAudience = allRecognizedAudience
+        .filter((item) => (!item.rank || item.rank <= 3) && item.contributionHeat > MIN_CONTRIBUTION_HEAT)
+        .slice(0, 3);
       state.recognitionDate = results.map((result) => result?.data?.summary?.date).find(Boolean) || toDateKey(new Date());
+      const recognizedRevenue = results
+        .map((result) => toNumber(result?.data?.summary?.revenue))
+        .find((value) => value > 0) || 0;
+      const recognizedGiftUsers = results
+        .map((result) => toNumber(result?.data?.summary?.giftUsers))
+        .find((value) => value > 0) || 0;
       const reportedThousandTicketUsers = results
         .map((result) => toNumber(result?.data?.summary?.thousandTicketUsers))
         .filter((value) => value > 0);
       const recognizedThousandTicketUsers = new Set(
-        results
-          .flatMap((result) => result?.data?.audience || [])
-          .filter((item) => toNumber(item.contributionHeat) >= 1000)
-          .map((item) => audienceIdPrefix(item.audienceId || item.nickname))
+        allRecognizedAudience
+          .filter((item) => toNumber(item.contributionHeat) > 1000)
+          .map((item) => String(item.audienceId || item.nickname).toLowerCase().replace(/\s+/g, ""))
           .filter(Boolean)
       ).size;
-      const thousandTicketUsers = Math.max(0, recognizedThousandTicketUsers, ...reportedThousandTicketUsers);
+      const thousandTicketUsers = allRecognizedAudience.length
+        ? recognizedThousandTicketUsers
+        : Math.max(0, ...reportedThousandTicketUsers);
+      const rankedSupporters = allRecognizedAudience.filter((item) => toNumber(item.contributionHeat) > 0);
+      const sSupporters = rankedSupporters.filter((item) => findSUserByAudience(item));
+      const reportedTotalHeat = Math.max(0, ...results.map((result) => toNumber(result?.data?.summary?.totalHeat)));
+      const totalHeat = reportedTotalHeat || rankedSupporters.reduce((sum, item) => sum + toNumber(item.contributionHeat), 0);
+      const sUserHeat = sSupporters.reduce((sum, item) => sum + toNumber(item.contributionHeat), 0);
+      const sRevenueRate = totalHeat > 0 ? sUserHeat / totalHeat : 0;
       $("#captureDate").value = state.recognitionDate;
-      $("#captureRevenue").value = state.recognizedAudience
-        .reduce((sum, item) => sum + item.contributionHeat / HEAT_PER_CNY, 0)
-        .toFixed(2);
-      $("#captureGiftUsers").value = state.recognizedAudience.length;
+      updateCaptureDateDisplay();
+      $("#captureRevenue").value = recognizedRevenue.toFixed(2);
+      $("#captureGiftUsers").value = recognizedGiftUsers || rankedSupporters.length;
       $("#captureThousandTicketUsers").value = thousandTicketUsers;
-      $("#liveText").value = state.recognizedAudience
-        .map((item) => `第${item.rank || "?"}名 ${item.nickname || item.audienceId}，ID：${item.audienceId || "未识别"}，贡献热度：${item.contributionHeat}${item.isFirstGift ? "，首次送礼" : ""}`)
-        .join("\n");
+      $("#captureSRate").value = (sRevenueRate * 100).toFixed(1);
       state.hasParsedLiveCapture = true;
       $("#recordBtn").disabled = false;
-      setImportStatus(`解析完成：找到 ${state.recognizedAudience.length} 位符合条件的观众，千票人数 ${thousandTicketUsers}。确认后点击“记录”。`);
+      setImportStatus(`解析完成：收入 ${formatCurrency(recognizedRevenue)}，榜单 >1000 共 ${thousandTicketUsers} 人，匹配 S 档案支持率 ${formatPercent(sRevenueRate)}。确认后点击“记录”。`);
       showToast(`已识别 ${state.recognizedAudience.length} 位符合条件的观众`);
     } catch (error) {
       state.hasParsedLiveCapture = false;
@@ -1708,7 +1794,7 @@
       state.users = existing
         ? state.users.map((item) => item.id === existing.id ? normalizedSaved : item)
         : [normalizedSaved, ...state.users];
-      await persistLiveSession(liveSummary, normalizedSaved, text, result.data.text || "");
+      await persistLiveSession(liveSummary, normalizedSaved, descriptionText, result.data.text || "");
       if (!state.cloudEnabled) saveLocalUsers();
       resetImport();
       state.activeTier = "全部";
@@ -1841,7 +1927,9 @@
       if ($("#dailyEditForm").hidden) {
         renderTrends();
       } else {
-        showToast(`当前编辑内容将保存到 ${state.trendFilters.dailyDate}`);
+        $("#dailyPeriodLabel").textContent = formatChineseDate(`${state.trendFilters.dailyDate}T00:00:00`);
+        $("#dailyTrendTitle").textContent = `${formatChineseDate(`${state.trendFilters.dailyDate}T00:00:00`)}数据`;
+        showToast(`当前编辑内容将保存到 ${formatChineseDate(`${state.trendFilters.dailyDate}T00:00:00`)}`);
       }
     });
     $("#editDailyBtn").addEventListener("click", openDailyEditor);
@@ -1855,6 +1943,11 @@
     $("#monthlyPeriod").addEventListener("change", (event) => {
       state.trendFilters.monthlyPeriod = event.target.value || toMonthKey(new Date());
       renderTrends();
+    });
+    $("#monthPlanPeriod").addEventListener("change", (event) => {
+      state.trendFilters.monthPlanPeriod = event.target.value || toMonthKey(new Date());
+      const monthly = getMonthlyTrend(state.trends || emptyTrends(), state.trendFilters.monthPlanPeriod);
+      renderMonthPlan(state.trendFilters.monthPlanPeriod, monthly.revenue);
     });
     ["monthLiveCount", "monthTargetRevenue", "monthForecastRevenue", "monthActualRevenue"].forEach((id) => {
       $(`#${id}`).addEventListener("input", saveMonthPlan);
@@ -2005,6 +2098,7 @@
     });
 
     $("#imageInput").addEventListener("change", (event) => setSelectedImages(event.target.files));
+    $("#captureDate").addEventListener("change", updateCaptureDateDisplay);
     const dropzone = $("#dropzone");
     ["dragenter", "dragover"].forEach((type) => {
       dropzone.addEventListener(type, (event) => {
@@ -2026,6 +2120,7 @@
   async function init() {
     buildTagOptions();
     $("#captureDate").value = toDateKey(new Date());
+    updateCaptureDateDisplay();
     bindEvents();
     renderAuthPanel();
     switchView(state.activeView);

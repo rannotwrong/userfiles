@@ -798,6 +798,36 @@ textarea {
   gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
+.plan-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.plan-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+.plan-status[data-status="active"] {
+  color: #9a6700;
+  background: #fff4cc;
+}
+.plan-status[data-status="complete"] {
+  color: #087454;
+  background: #e7f8f1;
+}
+.plan-status[data-status="missed"] {
+  color: #b42318;
+  background: #fff0ee;
+}
 .trend-plan-head h3 {
   margin: 0;
   font-size: 20px;
@@ -805,7 +835,7 @@ textarea {
 }
 .plan-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
 .plan-field {
@@ -862,6 +892,45 @@ textarea {
 .period-control {
   gap: var(--space-2);
 }
+.date-picker-control,
+.date-field-control {
+  position: relative;
+}
+.date-picker-control strong,
+.date-field-control strong {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.date-field-control {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.date-field-control strong {
+  color: var(--text);
+  font-size: 16px;
+}
+.date-picker-control input,
+.date-field-control input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.date-picker-control:focus-within,
+.date-field-control:focus-within {
+  outline: 2px solid rgba(18, 184, 200, .32);
+  outline-offset: 2px;
+}
 .period-control span {
   white-space: nowrap;
 }
@@ -878,6 +947,13 @@ textarea {
 .period-control input:focus-visible {
   outline: 2px solid rgba(18, 184, 200, .32);
   outline-offset: 2px;
+}
+.period-control.date-picker-control input,
+.date-field-control input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  opacity: 0;
 }
 .metric-grid {
   display: grid;
@@ -946,9 +1022,17 @@ textarea {
   font-size: 12px;
   font-weight: 650;
 }
+.daily-edit-grid label.full {
+  grid-column: 1 / -1;
+}
 .daily-edit-grid input {
   min-width: 0;
   font-size: 16px;
+}
+.daily-edit-grid textarea {
+  min-height: 76px;
+  font-size: 16px;
+  font-weight: 400;
 }
 .chart-card {
   padding: var(--space-4);
@@ -1199,7 +1283,6 @@ dialog::backdrop {
 @media (min-width: 680px) {
   .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .metric-grid-five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toolbar {
     flex-direction: row;
     align-items: center;
@@ -1213,7 +1296,6 @@ dialog::backdrop {
 @media (min-width: 1024px) {
   .trend-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metric-grid-five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .plan-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .workspace {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "toolbar" "list";
@@ -1231,7 +1313,6 @@ dialog::backdrop {
   .metric-grid,
   .metric-grid.compact,
   .daily-edit-grid,
-  .plan-grid,
   .form-grid {
     grid-template-columns: 1fr;
   }
@@ -1309,6 +1390,10 @@ dialog::backdrop {
   .trend-plan-head,
   .trend-section-head {
     flex-direction: column;
+  }
+  .plan-head-actions {
+    width: 100%;
+    justify-content: space-between;
   }
   .period-control {
     width: 100%;

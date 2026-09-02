@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户日记">
   <title>用户日记 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260902-daily-edit">
+  <link rel="stylesheet" href="./styles.css?v=20260902-plan-date-ocr">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -103,7 +103,10 @@
         <div class="capture-result-grid" aria-label="直播识别结果">
           <label class="capture-field">
             <span>日期</span>
-            <input id="captureDate" type="date">
+            <span class="date-field-control">
+              <strong id="captureDateDisplay">请选择日期</strong>
+              <input id="captureDate" type="date" lang="zh-CN" aria-label="选择直播日期">
+            </span>
           </label>
           <label class="capture-field">
             <span>总收入</span>
@@ -118,8 +121,8 @@
             <input id="captureThousandTicketUsers" type="number" min="0" step="1" value="0">
           </label>
           <label class="capture-field full">
-            <span>最高价值礼物</span>
-            <input id="captureTopGift" type="text" placeholder="如：嘉年华 / 守护礼盒">
+            <span>S级用户支持率（按档案匹配）</span>
+            <input id="captureSRate" type="number" min="0" max="100" step="0.1" value="0">
           </label>
         </div>
         <div class="progress" id="recognizeProgress" hidden="" aria-label="图片识别进度">
@@ -127,8 +130,8 @@
         </div>
         <div class="input-stack">
           <div>
-            <label class="field-label" for="liveText">可文字描述</label>
-            <textarea id="liveText" placeholder="例如：小满，支持率 35%，总消费金额 5600，单次消费 600，愿意接话，直播间聊天积极…"></textarea>
+            <label class="field-label" for="liveText">描述</label>
+            <textarea id="liveText" placeholder="记录本场直播内容或备注"></textarea>
           </div>
           <div class="import-actions">
             <button class="secondary-btn" id="parseBtn" type="button">解析</button>
@@ -202,7 +205,13 @@
               <p class="section-kicker">MONTH PLAN</p>
               <h3 id="monthPlanTitle">本月目标</h3>
             </div>
-            <span class="hint">支持直接编辑，自动保存</span>
+            <div class="plan-head-actions">
+              <span class="plan-status" id="monthPlanStatus" data-status="active">进行中</span>
+              <label class="period-control" for="monthPlanPeriod">
+                <span>目标月份</span>
+                <input id="monthPlanPeriod" type="month">
+              </label>
+            </div>
           </div>
           <div class="plan-grid">
             <label class="plan-field">
@@ -219,7 +228,7 @@
             </label>
             <label class="plan-field">
               <span>本月收入</span>
-              <input id="monthActualRevenue" type="number" min="0" step="0.01" value="0">
+              <input id="monthActualRevenue" type="number" min="0" step="0.01" value="0" readonly>
             </label>
           </div>
         </section>
@@ -230,9 +239,10 @@
               <p class="section-kicker">DAY</p>
               <h3 id="dailyTrendTitle">日维度</h3>
             </div>
-            <label class="period-control" for="dailyDate">
-              <span>选择日期</span>
-              <input id="dailyDate" type="date">
+            <label class="period-control date-picker-control" for="dailyDate">
+              <span>日期</span>
+              <strong id="dailyPeriodLabel">请选择日期</strong>
+              <input id="dailyDate" type="date" lang="zh-CN" aria-label="选择日维度日期">
             </label>
           </div>
           <div class="metric-grid metric-grid-five" id="dailyMetrics"></div>
@@ -258,9 +268,9 @@
                 <span>S级用户支持率（%）</span>
                 <input id="editDailySRate" type="number" min="0" max="100" step="0.1">
               </label>
-              <label>
-                <span>首次送礼人数（千票）</span>
-                <input id="editDailyFirstPaidUsers" type="number" min="0" step="1">
+              <label class="full">
+                <span>直播描述</span>
+                <textarea id="editDailyDescription" placeholder="记录当天直播内容或备注"></textarea>
               </label>
             </div>
             <div class="daily-edit-actions">
@@ -277,9 +287,10 @@
                 <p class="section-kicker">WEEK</p>
                 <h3 id="weeklyTrendTitle">周维度</h3>
               </div>
-              <label class="period-control" for="weeklyPeriod">
-                <span>选择周</span>
-                <input id="weeklyPeriod" type="week">
+              <label class="period-control date-picker-control" for="weeklyPeriod">
+                <span>周</span>
+                <strong id="weeklyPeriodLabel">请选择周</strong>
+                <input id="weeklyPeriod" type="week" aria-label="选择周">
               </label>
             </div>
             <div class="metric-grid compact" id="weeklyMetrics"></div>
@@ -544,10 +555,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js?v=20260826-auth-stats"></script>
-  <script src="./cloudStore.js?v=20260902-daily-edit"></script>
+  <script src="./cloudStore.js?v=20260902-plan-date-ocr"></script>
   <script src="./mock.js?v=20260826-auth-stats"></script>
-  <script src="./api.js?v=20260902-parse-record"></script>
-  <script src="./app.js?v=20260902-edit-date-target"></script>
+  <script src="./api.js?v=20260902-plan-date-ocr"></script>
+  <script src="./app.js?v=20260902-plan-date-ocr"></script>
 
 
 

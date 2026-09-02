@@ -321,9 +321,6 @@
 
   async function saveLiveSession(session) {
     const authSession = await requireSession();
-    const thousandTicketText = toNumber(session.thousandTicketUsers) > 0
-      ? `千票人数：${toNumber(session.thousandTicketUsers)}`
-      : "";
     const payload = {
       owner_id: authSession.user.id,
       live_date: session.date || new Date().toISOString().slice(0, 10),
@@ -333,7 +330,7 @@
       first_paid_user_count: toNumber(session.firstPaidUsers),
       new_potential_user_count: toNumber(session.potentialUsers),
       s_user_revenue: toNumber(session.sRevenue),
-      raw_record_text: [session.rawText || "", thousandTicketText].filter(Boolean).join("\n"),
+      raw_record_text: session.description || session.rawText || "",
       ocr_text: session.ocrText || ""
     };
     const { data, error } = await client
@@ -367,9 +364,10 @@
       live_date: date,
       total_revenue: revenue,
       paid_user_count: toNumber(daily.paidUsers),
-      first_paid_user_count: toNumber(daily.firstPaidUsers),
+      first_paid_user_count: rows.reduce((sum, row) => sum + toNumber(row.first_paid_user_count), 0),
       new_potential_user_count: toNumber(daily.thousandTicketUsers),
-      s_user_revenue: Math.round(revenue * sRevenueRate * 100) / 100
+      s_user_revenue: Math.round(revenue * sRevenueRate * 100) / 100,
+      raw_record_text: String(daily.description || "").trim()
     };
 
     if (!rows.length) {
@@ -439,18 +437,21 @@
 
   async function listTrends() {
     const session = await requireSession();
-    const [daily, weekly, monthly] = await Promise.all([
+    const [daily, weekly, monthly, sessions] = await Promise.all([
       client.from("live_daily_metrics").select("*").eq("owner_id", session.user.id).order("live_date", { ascending: false }).limit(30),
       client.from("live_weekly_metrics").select("*").eq("owner_id", session.user.id).order("week_start_date", { ascending: true }).limit(12),
-      client.from("live_monthly_metrics").select("*").eq("owner_id", session.user.id).order("month_start_date", { ascending: true }).limit(12)
+      client.from("live_monthly_metrics").select("*").eq("owner_id", session.user.id).order("month_start_date", { ascending: true }).limit(12),
+      client.from("live_sessions").select("live_date, raw_record_text, created_at").eq("owner_id", session.user.id).order("created_at", { ascending: false }).limit(90)
     ]);
     if (daily.error) throw daily.error;
     if (weekly.error) throw weekly.error;
     if (monthly.error) throw monthly.error;
+    if (sessions.error) throw sessions.error;
     return {
       daily: daily.data || [],
       weekly: weekly.data || [],
-      monthly: monthly.data || []
+      monthly: monthly.data || [],
+      sessions: sessions.data || []
     };
   }
 
