@@ -240,23 +240,26 @@
   }
 
   function hasPurposeBrotherTag(user = {}) {
-    const tags = [
-      ...(Array.isArray(user.tags) ? user.tags : []),
-      ...(Array.isArray(user.manualTags) ? user.manualTags : []),
-      ...(Array.isArray(user.autoTags) ? user.autoTags : [])
-    ];
-    return tags.some((tag) => String(tag || "").trim() === "目的哥");
+    return getVisibleUserTags(user).some((tag) => String(tag || "").trim() === "目的哥");
+  }
+
+  function getVisibleUserTags(user = {}) {
+    if (Array.isArray(user.manualTags) && user.manualTags.length) {
+      return dedupe(user.manualTags.map((tag) => String(tag || "").trim()).filter(Boolean));
+    }
+    const tags = Array.isArray(user.tags) ? user.tags : [];
+    const autoTags = new Set((Array.isArray(user.autoTags) ? user.autoTags : []).map((tag) => String(tag || "").trim()));
+    return dedupe(tags
+      .map((tag) => String(tag || "").trim())
+      .filter(Boolean)
+      .filter((tag) => !autoTags.has(tag)));
   }
 
   function classifyTier(metrics, user = {}) {
     const isPurposeBrother = hasPurposeBrotherTag(user);
     const hasSLevelSingleSpend = metrics.highSingleSpendCount >= 5;
     const hasALevelSingleSpend = metrics.highSingleSpendCount >= 3 && metrics.highSingleSpendCount < 5;
-    const hasFanClubLevel10 = [
-      ...(Array.isArray(user.tags) ? user.tags : []),
-      ...(Array.isArray(user.manualTags) ? user.manualTags : []),
-      ...(Array.isArray(user.autoTags) ? user.autoTags : [])
-    ].some((tag) => String(tag || "").trim() === "粉丝团10级");
+    const hasFanClubLevel10 = getVisibleUserTags(user).some((tag) => String(tag || "").trim() === "粉丝团10级");
 
     if (!isPurposeBrother) {
       if (metrics.totalSpendAmount > 10000) {
@@ -345,9 +348,7 @@
     const { recalculateTier = false, tierSource = user.tierSource || savedSnapshot.tierSource } = options;
     const birthday = Object.prototype.hasOwnProperty.call(user, "birthday") ? user.birthday : (savedSnapshot.birthday || "");
     const audienceId = String(user.audienceId || savedSnapshot.audienceId || "").trim();
-    const manualTags = Array.isArray(user.manualTags)
-      ? user.manualTags
-      : (Array.isArray(user.tags) ? user.tags.filter((tag) => !AUTO_TAGS.includes(tag)) : []);
+    const manualTags = getVisibleUserTags(user);
     const metrics = getUserMetrics(user);
     const classificationContext = {
       ...user,
@@ -372,7 +373,7 @@
       audienceId,
       manualTags,
       autoTags,
-      tags: dedupe([...autoTags, ...manualTags]),
+      tags: manualTags,
       amount: metrics.totalSpendAmount,
       totalLiveCount: metrics.totalLiveCount,
       appearedCount: metrics.appearedCount,
@@ -680,6 +681,7 @@
     $("#userGrid").innerHTML = filtered.length
       ? filtered.map((user) => {
         const metrics = getDisplayUserMetrics(user);
+        const visibleTags = getVisibleUserTags(user);
         return `
         <button class="user-card" type="button" data-user-id="${escapeHTML(user.id)}" aria-label="查看 ${escapeHTML(user.nickname)} 的完整档案">
           <span class="card-top">
@@ -693,7 +695,7 @@
             <span class="tier tier-${user.tier}" title="${user.tier} 级用户">${user.tier}</span>
           </span>
           <span class="tags">
-            ${(user.tags || []).slice(0, 3).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}
+            ${visibleTags.slice(0, 3).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}
           </span>
           <span class="card-meta">
             <span>
@@ -1291,6 +1293,7 @@
     if (!user) return;
     const metrics = getDisplayUserMetrics(user);
     state.detailUserId = id;
+    const visibleTags = getVisibleUserTags(user);
     const rows = [
       ["职业", user.occupation || "未记录"],
       ["兴趣", user.interests || "未记录"],
@@ -1324,7 +1327,7 @@
           <span class="level">最近互动 ${formatDate(user.lastInteraction)}</span>
         </div>
       </div>
-      <div class="tags">${(user.tags || []).map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>
+      <div class="tags">${visibleTags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>
       <div class="detail-grid">
         ${rows.map(([key, value]) => `
           <div class="detail-row">
