@@ -1774,9 +1774,7 @@
           .map((item) => String(item.audienceId || item.nickname).toLowerCase().replace(/\s+/g, ""))
           .filter(Boolean)
       ).size;
-      const thousandTicketUsers = allRecognizedAudience.length
-        ? recognizedThousandTicketUsers
-        : Math.max(0, ...reportedThousandTicketUsers);
+      const thousandTicketUsers = reportedThousandTicketUsers[0] || recognizedThousandTicketUsers;
       const rankedSupporters = allRecognizedAudience.filter((item) => toNumber(item.contributionHeat) > 0);
       const sSupporters = rankedSupporters.filter((item) => findSUserByAudience(item));
       const reportedTotalHeat = Math.max(0, ...results.map((result) => toNumber(result?.data?.summary?.totalHeat)));
@@ -1791,7 +1789,7 @@
       $("#captureSRate").value = (sRevenueRate * 100).toFixed(1);
       state.hasParsedLiveCapture = true;
       $("#recordBtn").disabled = false;
-      setImportStatus(`解析完成：共识别 ${allRecognizedAudience.length} 位观众；前三名且热度 ≥1000 的 ${state.profilePromptAudience.length} 位会在记录时询问是否加入档案。`);
+      setImportStatus(`解析完成：已按截图总览写入上方字段，并识别 ${allRecognizedAudience.length} 位观众；前三名且热度 ≥1000 的 ${state.profilePromptAudience.length} 位会在记录时询问是否加入档案。`);
       showToast(`已识别 ${allRecognizedAudience.length} 位观众`);
     } catch (error) {
       state.hasParsedLiveCapture = false;

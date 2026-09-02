@@ -13,6 +13,42 @@
     });
   }
 
+  function loadImageFromFile(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(image);
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("图片读取失败"));
+      };
+      image.src = url;
+    });
+  }
+
+  async function compressImageForRecognition(file) {
+    const maxSide = 1600;
+    const quality = 0.78;
+    const image = await loadImageFromFile(file);
+    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+    const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+    const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d", { alpha: false });
+    context.drawImage(image, 0, 0, width, height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg") || "live-ranking.jpg", {
+      type: "image/jpeg",
+      lastModified: file.lastModified || Date.now()
+    });
+  }
+
   function splitDataUrl(dataUrl) {
     const match = String(dataUrl || "").match(/^data:([^;]+);base64,(.+)$/);
     return {
@@ -136,9 +172,11 @@
         throw new Error("请选择图片文件");
       }
       onProgress?.(8);
-      const dataUrl = await fileToDataUrl(file);
+      const optimizedFile = await compressImageForRecognition(file);
+      onProgress?.(18);
+      const dataUrl = await fileToDataUrl(optimizedFile);
       const { mimeType, imageBase64 } = splitDataUrl(dataUrl);
-      onProgress?.(28);
+      onProgress?.(32);
       if (proxyBaseUrl) {
         const result = await requestProxy("/api/live-records/recognize-image", {
           imageBase64,

@@ -137,7 +137,7 @@
             <textarea id="liveText" placeholder="记录本场直播内容或备注" style="position: relative;"></textarea>
           </div>
           <div class="import-actions">
-            <button class="secondary-btn" id="parseBtn" type="button">解析</button>
+            <button class="secondary-btn" id="parseBtn" type="button" style="position: relative;">解析</button>
             <button class="primary-btn" id="recordBtn" type="button" disabled="">记录</button>
           </div>
         </div>
@@ -632,14 +632,15 @@
     </form>
   </dialog>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite">请先选择图片或填写文字</div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js?v=20260826-auth-stats"></script>
   <script src="./cloudStore.js?v=20260902-plan-date-ocr"></script>
   <script src="./mock.js?v=20260826-auth-stats"></script>
-  <script src="./api.js?v=20260902-plan-date-ocr"></script>
-  <script src="./app.js?v=20260902-upload-preview"></script>
+  <script src="./api.js?v=20260902-ocr-fast-summary"></script>
+  <script src="./app.js?v=20260902-ocr-fast-summary"></script>
+
 
 
 
