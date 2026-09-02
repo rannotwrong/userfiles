@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户日记">
   <title>用户日记 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260826-auth-stats">
+  <link rel="stylesheet" href="./styles.css?v=20260902-daily-edit">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -236,6 +236,38 @@
             </label>
           </div>
           <div class="metric-grid metric-grid-five" id="dailyMetrics"></div>
+          <div class="daily-data-actions">
+            <button class="secondary-btn" id="editDailyBtn" type="button">修改该日数据</button>
+            <button class="danger-btn" id="deleteDailyBtn" type="button">删除该日数据</button>
+          </div>
+          <form class="daily-edit-panel" id="dailyEditForm" hidden>
+            <div class="daily-edit-grid">
+              <label>
+                <span>日收入</span>
+                <input id="editDailyRevenue" type="number" min="0" step="0.01">
+              </label>
+              <label>
+                <span>支持用户数</span>
+                <input id="editDailyPaidUsers" type="number" min="0" step="1">
+              </label>
+              <label>
+                <span>千票用户数</span>
+                <input id="editDailyThousandUsers" type="number" min="0" step="1">
+              </label>
+              <label>
+                <span>S级用户支持率（%）</span>
+                <input id="editDailySRate" type="number" min="0" max="100" step="0.1">
+              </label>
+              <label>
+                <span>首次送礼人数（千票）</span>
+                <input id="editDailyFirstPaidUsers" type="number" min="0" step="1">
+              </label>
+            </div>
+            <div class="daily-edit-actions">
+              <button class="secondary-btn" id="cancelDailyEditBtn" type="button">取消</button>
+              <button class="primary-btn" type="submit">保存修改</button>
+            </div>
+          </form>
         </section>
 
         <section class="trend-columns">
@@ -512,10 +544,11 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js?v=20260826-auth-stats"></script>
-  <script src="./cloudStore.js?v=20260902-parse-record"></script>
+  <script src="./cloudStore.js?v=20260902-daily-edit"></script>
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260902-parse-record"></script>
-  <script src="./app.js?v=20260902-trend-metrics"></script>
+  <script src="./app.js?v=20260902-daily-edit"></script>
+
 
 
 

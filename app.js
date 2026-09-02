@@ -910,6 +910,114 @@
     );
   }
 
+  function closeDailyEditor() {
+    $("#dailyEditForm").hidden = true;
+    $("#dailyMetrics").hidden = false;
+    $("#editDailyBtn").hidden = false;
+  }
+
+  function openDailyEditor() {
+    const dateKey = state.trendFilters.dailyDate || toDateKey(new Date());
+    const daily = getDailyTrend(state.trends || emptyTrends(), dateKey);
+    $("#editDailyRevenue").value = toNumber(daily.revenue);
+    $("#editDailyPaidUsers").value = toNumber(daily.paidUsers);
+    $("#editDailyThousandUsers").value = toNumber(daily.thousandTicketUsers);
+    $("#editDailySRate").value = Math.round(toNumber(daily.sRevenueRate) * 1000) / 10;
+    $("#editDailyFirstPaidUsers").value = toNumber(daily.firstPaidUsers);
+    $("#dailyMetrics").hidden = true;
+    $("#editDailyBtn").hidden = true;
+    $("#dailyEditForm").hidden = false;
+  }
+
+  function readDailyEditor() {
+    return {
+      revenue: Math.max(0, toNumber($("#editDailyRevenue").value)),
+      paidUsers: Math.max(0, Math.trunc(toNumber($("#editDailyPaidUsers").value))),
+      thousandTicketUsers: Math.max(0, Math.trunc(toNumber($("#editDailyThousandUsers").value))),
+      sRevenueRate: Math.max(0, Math.min(1, toNumber($("#editDailySRate").value) / 100)),
+      firstPaidUsers: Math.max(0, Math.trunc(toNumber($("#editDailyFirstPaidUsers").value)))
+    };
+  }
+
+  async function saveDailyEditor(event) {
+    event.preventDefault();
+    if (state.cloudEnabled && !state.currentUser) {
+      showToast("请先登录云端账号");
+      return;
+    }
+    const dateKey = state.trendFilters.dailyDate || toDateKey(new Date());
+    const daily = readDailyEditor();
+    const submitButton = $("#dailyEditForm button[type='submit']");
+    submitButton.disabled = true;
+    submitButton.textContent = "保存中…";
+    try {
+      if (state.cloudEnabled && state.currentUser) {
+        await cloudStore.updateDailyLiveData(dateKey, daily);
+        await loadCloudTrends();
+      } else {
+        const sameDate = (state.liveSessions || []).filter((item) => item.date === dateKey);
+        const replacement = normalizeLiveSessionRecord({
+          id: sameDate[0]?.id || uid(),
+          date: dateKey,
+          revenue: daily.revenue,
+          paidUsers: daily.paidUsers,
+          firstPaidUsers: daily.firstPaidUsers,
+          thousandTicketUsers: daily.thousandTicketUsers,
+          potentialUsers: daily.thousandTicketUsers,
+          sRevenue: Math.round(daily.revenue * daily.sRevenueRate * 100) / 100,
+          createdAt: sameDate[0]?.createdAt || new Date().toISOString(),
+          rawText: sameDate[0]?.rawText || "手动修改日维度数据"
+        });
+        state.liveSessions = [
+          replacement,
+          ...(state.liveSessions || []).filter((item) => item.date !== dateKey)
+        ];
+        saveLocalLiveSessions();
+        state.trends = buildTrendsFromLiveSessions(state.liveSessions);
+      }
+      closeDailyEditor();
+      renderTrends();
+      showToast("该日数据已更新，周和月趋势已同步");
+    } catch (error) {
+      console.warn("日维度数据更新失败。", error);
+      showToast(error.message || "日维度数据更新失败");
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = "保存修改";
+    }
+  }
+
+  async function deleteDailyData() {
+    if (state.cloudEnabled && !state.currentUser) {
+      showToast("请先登录云端账号");
+      return;
+    }
+    const dateKey = state.trendFilters.dailyDate || toDateKey(new Date());
+    if (!window.confirm(`确定删除 ${dateKey} 的全部直播数据吗？删除后周、月趋势也会同步变化。`)) return;
+    const button = $("#deleteDailyBtn");
+    button.disabled = true;
+    button.textContent = "删除中…";
+    try {
+      if (state.cloudEnabled && state.currentUser) {
+        await cloudStore.deleteDailyLiveData(dateKey);
+        await loadCloudTrends();
+      } else {
+        state.liveSessions = (state.liveSessions || []).filter((item) => item.date !== dateKey);
+        saveLocalLiveSessions();
+        state.trends = buildTrendsFromLiveSessions(state.liveSessions);
+      }
+      closeDailyEditor();
+      renderTrends();
+      showToast("该日数据已删除，周和月趋势已同步");
+    } catch (error) {
+      console.warn("日维度数据删除失败。", error);
+      showToast(error.message || "日维度数据删除失败");
+    } finally {
+      button.disabled = false;
+      button.textContent = "删除该日数据";
+    }
+  }
+
   function renderTrends() {
     const trends = state.trends || emptyTrends();
     const dailyDate = state.trendFilters.dailyDate || toDateKey(new Date());
@@ -1728,8 +1836,13 @@
     });
     $("#dailyDate").addEventListener("change", (event) => {
       state.trendFilters.dailyDate = event.target.value || toDateKey(new Date());
+      closeDailyEditor();
       renderTrends();
     });
+    $("#editDailyBtn").addEventListener("click", openDailyEditor);
+    $("#deleteDailyBtn").addEventListener("click", deleteDailyData);
+    $("#cancelDailyEditBtn").addEventListener("click", closeDailyEditor);
+    $("#dailyEditForm").addEventListener("submit", saveDailyEditor);
     $("#weeklyPeriod").addEventListener("change", (event) => {
       state.trendFilters.weeklyPeriod = event.target.value || toWeekInputValue(new Date());
       renderTrends();

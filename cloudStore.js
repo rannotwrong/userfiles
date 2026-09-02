@@ -345,6 +345,74 @@
     return data;
   }
 
+  async function listLiveSessionsByDate(date) {
+    const session = await requireSession();
+    const { data, error } = await client
+      .from("live_sessions")
+      .select("*")
+      .eq("owner_id", session.user.id)
+      .eq("live_date", date)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function updateDailyLiveData(date, daily) {
+    const session = await requireSession();
+    const rows = await listLiveSessionsByDate(date);
+    const revenue = toNumber(daily.revenue);
+    const sRevenueRate = Math.max(0, Math.min(1, toNumber(daily.sRevenueRate)));
+    const payload = {
+      owner_id: session.user.id,
+      live_date: date,
+      total_revenue: revenue,
+      paid_user_count: toNumber(daily.paidUsers),
+      first_paid_user_count: toNumber(daily.firstPaidUsers),
+      new_potential_user_count: toNumber(daily.thousandTicketUsers),
+      s_user_revenue: Math.round(revenue * sRevenueRate * 100) / 100
+    };
+
+    if (!rows.length) {
+      const { data, error } = await client
+        .from("live_sessions")
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+
+    const { data, error } = await client
+      .from("live_sessions")
+      .update(payload)
+      .eq("id", rows[0].id)
+      .eq("owner_id", session.user.id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    const duplicateIds = rows.slice(1).map((row) => row.id);
+    if (duplicateIds.length) {
+      const { error: deleteError } = await client
+        .from("live_sessions")
+        .delete()
+        .eq("owner_id", session.user.id)
+        .in("id", duplicateIds);
+      if (deleteError) throw deleteError;
+    }
+    return data;
+  }
+
+  async function deleteDailyLiveData(date) {
+    const session = await requireSession();
+    const { error } = await client
+      .from("live_sessions")
+      .delete()
+      .eq("owner_id", session.user.id)
+      .eq("live_date", date);
+    if (error) throw error;
+  }
+
   async function writeTaggingLog(userId, oldTier, user, operatorType = user.tierSource || "manual") {
     const session = await requireSession();
     const safeOperatorType = operatorType === "system" ? "system" : "manual";
@@ -400,6 +468,9 @@
     deleteUser,
     addInteraction,
     saveLiveSession,
+    listLiveSessionsByDate,
+    updateDailyLiveData,
+    deleteDailyLiveData,
     listTrends
   };
 })();
