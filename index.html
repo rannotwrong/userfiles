@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户日记">
   <title>用户日记 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260902-plan-date-ocr">
+  <link rel="stylesheet" href="./styles.css?v=20260902-upload-preview">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -94,17 +94,20 @@
           </div>
           <span class="hand-note">智能录入</span>
         </div>
-        <label class="dropzone" id="dropzone">
-          <input id="imageInput" type="file" accept="image/*" multiple>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
-          <strong>上传直播榜单截图</strong>
-          <small>最多选择或拖拽 2 张图片，自动识别前三名</small>
+        <label class="dropzone" id="dropzone" style="position: relative;">
+          <input id="imageInput" type="file" accept="image/*" multiple="">
+          <div class="dropzone-prompt" id="uploadPrompt">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
+            <strong>上传直播榜单截图</strong>
+            <small>最多选择或拖拽 2 张图片，自动识别全部用户</small>
+          </div>
+          <div class="upload-preview-grid" id="imagePreviewGrid" hidden="" aria-live="polite"></div>
         </label>
         <div class="capture-result-grid" aria-label="直播识别结果">
           <label class="capture-field">
             <span>日期</span>
             <span class="date-field-control">
-              <strong id="captureDateDisplay">请选择日期</strong>
+              <strong id="captureDateDisplay">2026/09/02</strong>
               <input id="captureDate" type="date" lang="zh-CN" aria-label="选择直播日期">
             </span>
           </label>
@@ -131,11 +134,11 @@
         <div class="input-stack">
           <div>
             <label class="field-label" for="liveText">描述</label>
-            <textarea id="liveText" placeholder="记录本场直播内容或备注"></textarea>
+            <textarea id="liveText" placeholder="记录本场直播内容或备注" style="position: relative;"></textarea>
           </div>
           <div class="import-actions">
             <button class="secondary-btn" id="parseBtn" type="button">解析</button>
-            <button class="primary-btn" id="recordBtn" type="button" disabled>记录</button>
+            <button class="primary-btn" id="recordBtn" type="button" disabled="">记录</button>
           </div>
         </div>
       </aside>
@@ -203,7 +206,7 @@
           <div class="trend-plan-head">
             <div>
               <p class="section-kicker">MONTH PLAN</p>
-              <h3 id="monthPlanTitle">本月目标</h3>
+              <h3 id="monthPlanTitle">2026年9月目标</h3>
             </div>
             <div class="plan-head-actions">
               <span class="plan-status" id="monthPlanStatus" data-status="active">进行中</span>
@@ -228,7 +231,7 @@
             </label>
             <label class="plan-field">
               <span>本月收入</span>
-              <input id="monthActualRevenue" type="number" min="0" step="0.01" value="0" readonly>
+              <input id="monthActualRevenue" type="number" min="0" step="0.01" value="0" readonly="">
             </label>
           </div>
         </section>
@@ -237,20 +240,40 @@
           <div class="trend-section-head">
             <div>
               <p class="section-kicker">DAY</p>
-              <h3 id="dailyTrendTitle">日维度</h3>
+              <h3 id="dailyTrendTitle">2026/09/02数据</h3>
             </div>
             <label class="period-control date-picker-control" for="dailyDate">
               <span>日期</span>
-              <strong id="dailyPeriodLabel">请选择日期</strong>
+              <strong id="dailyPeriodLabel">2026/09/02</strong>
               <input id="dailyDate" type="date" lang="zh-CN" aria-label="选择日维度日期">
             </label>
           </div>
-          <div class="metric-grid metric-grid-five" id="dailyMetrics"></div>
+          <div class="metric-grid metric-grid-five" id="dailyMetrics">
+      <article class="metric-card">
+        <span>日收入</span>
+        <strong>¥0</strong>
+      </article>
+      <article class="metric-card">
+        <span>支持用户数</span>
+        <strong>0 人</strong>
+      </article>
+      <article class="metric-card">
+        <span>千票人数</span>
+        <strong>0 人</strong>
+      </article>
+      <article class="metric-card">
+        <span>S级用户支持率</span>
+        <strong>0%</strong>
+      </article>
+      <article class="metric-card">
+        <span>直播描述</span>
+        <strong>暂无描述</strong>
+      </article></div>
           <div class="daily-data-actions">
             <button class="secondary-btn" id="editDailyBtn" type="button">修改</button>
             <button class="danger-btn" id="deleteDailyBtn" type="button">删除</button>
           </div>
-          <form class="daily-edit-panel" id="dailyEditForm" hidden>
+          <form class="daily-edit-panel" id="dailyEditForm" hidden="">
             <div class="daily-edit-grid">
               <label>
                 <span>日收入</span>
@@ -285,21 +308,33 @@
             <div class="trend-section-head">
               <div>
                 <p class="section-kicker">WEEK</p>
-                <h3 id="weeklyTrendTitle">周维度</h3>
+                <h3 id="weeklyTrendTitle">08/31-09/06周数据</h3>
               </div>
               <label class="period-control date-picker-control" for="weeklyPeriod">
                 <span>周</span>
-                <strong id="weeklyPeriodLabel">请选择周</strong>
+                <strong id="weeklyPeriodLabel">08/31-09/06</strong>
                 <input id="weeklyPeriod" type="week" aria-label="选择周">
               </label>
             </div>
-            <div class="metric-grid compact" id="weeklyMetrics"></div>
+            <div class="metric-grid compact" id="weeklyMetrics">
+      <article class="metric-card">
+        <span>周收入</span>
+        <strong>¥0</strong>
+      </article>
+      <article class="metric-card">
+        <span>新增用户档案</span>
+        <strong>0 人</strong>
+      </article></div>
             <div class="chart-card">
               <div class="chart-title">
                 <span>收入趋势图</span>
                 <small>近 7 天</small>
               </div>
-              <div id="weeklyChart"></div>
+              <div id="weeklyChart">
+        <div class="empty trend-empty">
+          <p>暂无直播记录</p>
+          <small>上传或录入直播记录后，这里会自动生成趋势图。</small>
+        </div></div>
             </div>
           </article>
 
@@ -307,26 +342,64 @@
             <div class="trend-section-head">
               <div>
                 <p class="section-kicker">MONTH</p>
-                <h3 id="monthlyTrendTitle">月维度</h3>
+                <h3 id="monthlyTrendTitle">2026年9月数据</h3>
               </div>
               <label class="period-control" for="monthlyPeriod">
                 <span>选择月</span>
                 <input id="monthlyPeriod" type="month">
               </label>
             </div>
-            <div class="metric-grid compact" id="monthlyMetrics"></div>
+            <div class="metric-grid compact" id="monthlyMetrics">
+      <article class="metric-card">
+        <span>月收入</span>
+        <strong>¥0</strong>
+      </article>
+      <article class="metric-card">
+        <span>新增用户档案</span>
+        <strong>0 人</strong>
+      </article></div>
             <div class="chart-card">
               <div class="chart-title">
                 <span>收入趋势图</span>
                 <small>近 4 周</small>
               </div>
-              <div id="monthlyChart"></div>
+              <div id="monthlyChart">
+        <div class="empty trend-empty">
+          <p>暂无直播记录</p>
+          <small>上传或录入直播记录后，这里会自动生成趋势图。</small>
+        </div></div>
             </div>
           </article>
         </section>
       </section>
     </main>
   </div>
+
+  <dialog id="audiencePromptDialog" class="compact-dialog" aria-labelledby="audiencePromptTitle">
+    <div class="dialog-head">
+      <div>
+        <p class="section-kicker">LIVE MATCH</p>
+        <h2 id="audiencePromptTitle">识别到高热度用户</h2>
+      </div>
+      <button class="icon-btn" type="button" data-close="audiencePromptDialog" aria-label="关闭弹窗">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="audience-prompt-card">
+        <span class="avatar" id="audiencePromptAvatar">用</span>
+        <div>
+          <h3 id="audiencePromptName">待确认用户</h3>
+          <p id="audiencePromptMeta">榜单信息待确认</p>
+        </div>
+      </div>
+      <p class="hint">是否把这位用户加入档案？选择“暂不加入”也会继续记录本场直播数据和趋势。</p>
+      <div class="dialog-actions">
+        <button class="secondary-btn" id="audiencePromptSkip" type="button">暂不加入</button>
+        <button class="primary-btn" id="audiencePromptSave" type="button">加入档案</button>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="userDialog" aria-labelledby="userDialogTitle">
     <form id="userForm" novalidate="">
@@ -367,43 +440,51 @@
           <div class="form-field full">
             <span class="field-label">核心标签（最多 3 个）</span>
             <div class="check-grid" id="tagOptions">
-              <label class="check-chip">
-                <input type="checkbox" name="tags" value="高额支持">
-                <span>高额支持</span>
-              </label>
-              <label class="check-chip">
-                <input type="checkbox" name="tags" value="稳定陪伴">
-                <span>稳定陪伴</span>
-              </label>
-              <label class="check-chip">
-                <input type="checkbox" name="tags" value="氛围带动">
-                <span>氛围带动</span>
-              </label>
-              <label class="check-chip">
-                <input type="checkbox" name="tags" value="点歌偏好">
-                <span>点歌偏好</span>
-              </label>
-              <label class="check-chip">
-                <input type="checkbox" name="tags" value="情绪支持">
-                <span>情绪支持</span>
-              </label>
-              <label class="check-chip">
-                <input type="checkbox" name="tags" value="预算敏感">
-                <span>预算敏感</span>
-              </label>
-              <label class="check-chip">
-                <input type="checkbox" name="tags" value="新进观望">
-                <span>新进观望</span>
-              </label>
-              <label class="check-chip">
-                <input type="checkbox" name="tags" value="潜水守候">
-                <span>潜水守候</span>
-              </label>
-              <label class="check-chip">
-                <input type="checkbox" name="tags" value="目的用户">
-                <span>目的用户</span>
-              </label>
-            </div>
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="高额支持">
+        <span>高额支持</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="稳定陪伴">
+        <span>稳定陪伴</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="氛围带动">
+        <span>氛围带动</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="点歌偏好">
+        <span>点歌偏好</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="情绪支持">
+        <span>情绪支持</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="预算敏感">
+        <span>预算敏感</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="新进观望">
+        <span>新进观望</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="潜水守候">
+        <span>潜水守候</span>
+      </label>
+
+      <label class="check-chip">
+        <input type="checkbox" name="tags" value="目的用户">
+        <span>目的用户</span>
+      </label>
+    </div>
             <label class="field-label" for="customTags">自定义标签</label>
             <input id="customTags" type="text" placeholder="多个标签用顿号或逗号分隔，如：生日快到、喜欢粤语歌">
             <p class="form-error" id="tagsError"></p>
@@ -558,7 +639,8 @@
   <script src="./cloudStore.js?v=20260902-plan-date-ocr"></script>
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260902-plan-date-ocr"></script>
-  <script src="./app.js?v=20260902-plan-date-ocr-2"></script>
+  <script src="./app.js?v=20260902-upload-preview"></script>
+
 
 
 

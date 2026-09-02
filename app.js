@@ -10,7 +10,7 @@
   const ZODIAC_TAGS = ["白羊座", "金牛座", "双子座", "巨蟹座", "狮子座", "处女座", "天秤座", "天蝎座", "射手座", "摩羯座", "水瓶座", "双鱼座"];
   const AUTO_TAGS = ["高额支持", "稳定陪伴", "氛围带动", "点歌偏好", "情绪支持", "预算敏感", "新进观望", "潜水守候", "目的用户", ...ZODIAC_TAGS];
   const HEAT_PER_CNY = 10;
-  const MIN_CONTRIBUTION_HEAT = 2000;
+  const MIN_PROFILE_PROMPT_HEAT = 1000;
   const MAX_LIVE_IMAGES = 2;
   const toNumber = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
   const toBoolean = (value, fallback = false) => typeof value === "boolean" ? value : fallback;
@@ -23,10 +23,14 @@
     activeTier: "全部",
     search: "",
     selectedImages: [],
+    imagePreviewUrls: [],
     recognizedAudience: [],
+    profilePromptAudience: [],
     recognitionDate: "",
     hasParsedLiveCapture: false,
     detailUserId: null,
+    userFormDraft: null,
+    userFormCompletion: null,
     cloudEnabled: Boolean(cloudStore?.isConfigured),
     currentUser: null,
     isLoading: true,
@@ -1158,37 +1162,41 @@
     }
   }
 
-  function openUserForm(user = null) {
+  function openUserForm(user = null, options = {}) {
     if (state.cloudEnabled && !state.currentUser) {
       showToast("请先登录云端账号");
       $("#authEmail").focus();
+      options.onComplete?.(null);
       return;
     }
+    state.userFormDraft = options.draft || null;
+    state.userFormCompletion = typeof options.onComplete === "function" ? options.onComplete : null;
     $("#userForm").reset();
     $("#nicknameError").textContent = "";
     $("#tagsError").textContent = "";
+    const formUser = options.draft || user || {};
     $("#userId").value = user?.id || "";
-    $("#userDialogTitle").textContent = user ? "编辑用户档案" : "新增用户";
-    $("#nickname").value = user?.nickname || "";
-    $("#tier").value = user?.tier || "C";
-    $("#birthday").value = user?.birthday || "";
-    $("#occupation").value = user?.occupation || "";
-    $("#interests").value = user?.interests || "";
-    $("#recentEvent").value = user?.recentEvent || "";
-    $("#topics").value = user?.topics || "";
-    $("#amount").value = user?.amount || 0;
-    $("#supportedCount").value = user?.supportedCount || 0;
-    $("#latestSingleSpendAmount").value = user?.latestSingleSpendAmount || 0;
-    $("#highSingleSpendCount").value = user?.highSingleSpendCount || 0;
-    $("#maxSingleSpendAmount").value = user?.maxSingleSpendAmount || 0;
-    $("#firstInteraction").value = toDateInput(user?.firstInteraction || "");
-    $("#lastInteraction").value = toDateInput(user?.lastInteraction || "");
-    $("#isWillingToReply").checked = Boolean(user?.isWillingToReply);
-    $("#isNoPurpose").checked = user?.isNoPurpose !== false;
-    $("#hasOfflineMealRequest").checked = Boolean(user?.hasOfflineMealRequest);
-    $("#isOnlyRankAndChat").checked = Boolean(user?.isOnlyRankAndChat);
-    $("#maintenance").value = user?.maintenance || "";
-    buildTagOptions(user?.manualTags || []);
+    $("#userDialogTitle").textContent = options.title || (user ? "编辑用户档案" : "新增用户");
+    $("#nickname").value = formUser.nickname || "";
+    $("#tier").value = formUser.tier || "C";
+    $("#birthday").value = formUser.birthday || "";
+    $("#occupation").value = formUser.occupation || "";
+    $("#interests").value = formUser.interests || "";
+    $("#recentEvent").value = formUser.recentEvent || "";
+    $("#topics").value = formUser.topics || "";
+    $("#amount").value = formUser.amount || 0;
+    $("#supportedCount").value = formUser.supportedCount || 0;
+    $("#latestSingleSpendAmount").value = formUser.latestSingleSpendAmount || 0;
+    $("#highSingleSpendCount").value = formUser.highSingleSpendCount || 0;
+    $("#maxSingleSpendAmount").value = formUser.maxSingleSpendAmount || 0;
+    $("#firstInteraction").value = toDateInput(formUser.firstInteraction || "");
+    $("#lastInteraction").value = toDateInput(formUser.lastInteraction || "");
+    $("#isWillingToReply").checked = Boolean(formUser.isWillingToReply);
+    $("#isNoPurpose").checked = formUser.isNoPurpose !== false;
+    $("#hasOfflineMealRequest").checked = Boolean(formUser.hasOfflineMealRequest);
+    $("#isOnlyRankAndChat").checked = Boolean(formUser.isOnlyRankAndChat);
+    $("#maintenance").value = formUser.maintenance || "";
+    buildTagOptions(formUser.manualTags || []);
     $("#userDialog").showModal();
     requestAnimationFrame(() => $("#nickname").focus());
   }
@@ -1307,11 +1315,43 @@
     $("#imageInput").value = "";
     $("#recognizeProgress").hidden = true;
     $("#progressBar").style.width = "0";
-    state.selectedImages = [];
+    clearImagePreviews();
     state.recognizedAudience = [];
+    state.profilePromptAudience = [];
     state.recognitionDate = "";
     state.hasParsedLiveCapture = false;
     $("#recordBtn").disabled = true;
+  }
+
+  function clearImagePreviews() {
+    state.imagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    state.imagePreviewUrls = [];
+    state.selectedImages = [];
+    renderImagePreviews();
+  }
+
+  function renderImagePreviews() {
+    const prompt = $("#uploadPrompt");
+    const grid = $("#imagePreviewGrid");
+    const dropzone = $("#dropzone");
+    if (!prompt || !grid || !dropzone) return;
+    const hasImages = state.selectedImages.length > 0;
+    prompt.hidden = hasImages;
+    grid.hidden = !hasImages;
+    dropzone.classList.toggle("has-preview", hasImages);
+    if (!hasImages) {
+      grid.innerHTML = "";
+      return;
+    }
+    grid.innerHTML = state.selectedImages.map((file, index) => `
+      <div class="upload-preview-card">
+        <img src="${state.imagePreviewUrls[index]}" alt="${escapeHTML(file.name || `直播截图 ${index + 1}`)}">
+        <div class="upload-preview-meta">
+          <strong>${escapeHTML(file.name || `直播截图 ${index + 1}`)}</strong>
+          <small>已上传</small>
+        </div>
+      </div>
+    `).join("");
   }
 
   function setImportStatus(message) {
@@ -1463,31 +1503,84 @@
     return { user, interaction, spendAmount };
   }
 
+  function audienceKey(audience = {}) {
+    return String(audience.audienceId || audience.nickname || "").toLowerCase().replace(/\s+/g, "");
+  }
+
+  function shouldPromptAudienceProfile(audience = {}) {
+    return (!audience.rank || audience.rank <= 3) && toNumber(audience.contributionHeat) >= MIN_PROFILE_PROMPT_HEAT;
+  }
+
+  function requestAudienceProfileDecision(audience) {
+    return new Promise((resolve) => {
+      const dialog = $("#audiencePromptDialog");
+      const skipButton = $("#audiencePromptSkip");
+      const saveButton = $("#audiencePromptSave");
+      const name = audience.nickname || audience.audienceId || "未识别用户";
+      let settled = false;
+      $("#audiencePromptAvatar").textContent = name.slice(0, 1);
+      $("#audiencePromptName").textContent = name;
+      $("#audiencePromptMeta").textContent = `榜单第 ${audience.rank || "?"} 名 · 热度 ${toNumber(audience.contributionHeat).toLocaleString("zh-CN")} · ID：${audience.audienceId || "未识别"}`;
+
+      const cleanup = () => {
+        skipButton.removeEventListener("click", onSkip);
+        saveButton.removeEventListener("click", onSave);
+        dialog.removeEventListener("close", onClose);
+      };
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (dialog.open) dialog.close();
+        resolve(value);
+      };
+      const onSkip = () => finish(false);
+      const onSave = () => finish(true);
+      const onClose = () => finish(false);
+
+      skipButton.addEventListener("click", onSkip);
+      saveButton.addEventListener("click", onSave);
+      dialog.addEventListener("close", onClose);
+      dialog.showModal();
+    });
+  }
+
+  function openAudienceProfileForm(draft) {
+    return new Promise((resolve) => {
+      openUserForm(null, {
+        draft,
+        title: "确认新增用户档案",
+        onComplete: resolve
+      });
+    });
+  }
+
   async function processRecognizedAudience() {
     const candidates = state.recognizedAudience;
+    const promptKeys = new Set((state.profilePromptAudience || []).map(audienceKey));
     if (!candidates.length) {
-      showToast("未发现前三名中贡献热度大于 2000 的观众");
-      setImportStatus("没有符合条件的观众，本次未保存任何截图数据。");
-      return false;
+      setImportStatus("未识别到观众明细，将只记录本场直播数据。");
     }
 
     const processed = [];
     let newUserCount = 0;
     for (const audience of candidates) {
       const existing = findUserByAudience(audience);
-      if (!existing || audience.isFirstGift) {
-        const name = audience.nickname || audience.audienceId || "未识别观众";
-        const message = existing
-          ? `${name}（ID：${audience.audienceId || "未识别"}）标记为首次送礼，已匹配档案“${existing.nickname}”。是否更新该档案？`
-          : `${name}（ID：${audience.audienceId || "未识别"}）贡献热度 ${audience.contributionHeat}，当前没有匹配档案。是否新增用户档案？`;
-        if (!window.confirm(message)) continue;
-      }
-
       const { user: draft, interaction, spendAmount } = buildAudienceUserUpdate(
         audience,
         existing,
         state.recognitionDate || $("#captureDate").value
       );
+      if (!existing) {
+        if (!promptKeys.has(audienceKey(audience))) continue;
+        const shouldAdd = await requestAudienceProfileDecision(audience);
+        if (!shouldAdd) continue;
+        const savedFromForm = await openAudienceProfileForm(draft);
+        if (!savedFromForm) continue;
+        processed.push({ audience, user: savedFromForm, spendAmount });
+        newUserCount += 1;
+        continue;
+      }
       let saved;
       if (state.cloudEnabled && state.currentUser && existing) {
         const result = await cloudStore.addInteraction(existing, interaction, draft);
@@ -1505,17 +1598,12 @@
       processed.push({ audience, user: saved, spendAmount });
     }
 
-    if (!processed.length) {
-      setImportStatus("你已取消所有待确认观众，本次未保存任何数据。");
-      return false;
-    }
-
     const summary = {
       date: state.recognitionDate || $("#captureDate").value || toDateKey(new Date()),
       revenue: toNumber($("#captureRevenue").value),
       giftUsers: toNumber($("#captureGiftUsers").value),
       thousandTicketUsers: toNumber($("#captureThousandTicketUsers").value),
-      newGiftUsers: processed.filter(({ audience }) => audience.isFirstGift && audience.contributionHeat >= 1000).length,
+      newGiftUsers: candidates.filter((audience) => audience.isFirstGift && toNumber(audience.contributionHeat) >= MIN_PROFILE_PROMPT_HEAT).length,
       sRevenueRate: Math.max(0, Math.min(1, toNumber($("#captureSRate").value) / 100)),
       score: 0
     };
@@ -1523,8 +1611,8 @@
     await persistLiveSession(summary, processed[0]?.user, description, "");
     if (!state.cloudEnabled) saveLocalUsers();
     renderUsers();
-    setImportStatus(`已处理 ${processed.length} 位观众，其中新增 ${newUserCount} 个档案。`);
-    showToast(`直播榜单已更新 ${processed.length} 位用户`);
+    setImportStatus(`已记录本场直播数据，并更新 ${processed.length} 位用户档案，其中新增 ${newUserCount} 个。`);
+    showToast(processed.length ? `直播榜单已更新 ${processed.length} 位用户` : "本场直播数据已记录");
     resetImport();
     return true;
   }
@@ -1625,17 +1713,20 @@
       showToast("请选择图片文件");
       return;
     }
+    clearImagePreviews();
     state.selectedImages = images.slice(0, MAX_LIVE_IMAGES);
+    state.imagePreviewUrls = state.selectedImages.map((file) => URL.createObjectURL(file));
     state.recognizedAudience = [];
+    state.profilePromptAudience = [];
     state.recognitionDate = "";
     state.hasParsedLiveCapture = false;
     $("#recordBtn").disabled = true;
-    $("#liveText").value = "";
     $("#captureRevenue").value = 0;
     $("#captureGiftUsers").value = 0;
     $("#captureThousandTicketUsers").value = 0;
     if (images.length > MAX_LIVE_IMAGES) showToast("最多识别两张图片，已自动取前两张");
-    setImportStatus(`已选择 ${state.selectedImages.length} 张图片，请点击“解析”。`);
+    renderImagePreviews();
+    setImportStatus(`已选择 ${state.selectedImages.length} 张图片，请点击“解析”。备注可自行填写，不会被识图结果覆盖。`);
     showToast(`已选择 ${state.selectedImages.length} 张图片`);
   }
 
@@ -1651,7 +1742,7 @@
     button.textContent = "识别中…";
     progress.hidden = false;
     $("#progressBar").style.width = "4%";
-    setImportStatus(`正在识别 ${state.selectedImages.length} 张图片中的前三名观众…`);
+    setImportStatus(`正在识别 ${state.selectedImages.length} 张图片中的全部观众…`);
 
     try {
       const progressByImage = state.selectedImages.map(() => 0);
@@ -1663,8 +1754,9 @@
         })
       )));
       const allRecognizedAudience = mergeRecognizedAudience(results);
-      state.recognizedAudience = allRecognizedAudience
-        .filter((item) => (!item.rank || item.rank <= 3) && item.contributionHeat > MIN_CONTRIBUTION_HEAT)
+      state.recognizedAudience = allRecognizedAudience;
+      state.profilePromptAudience = allRecognizedAudience
+        .filter(shouldPromptAudienceProfile)
         .slice(0, 3);
       state.recognitionDate = results.map((result) => result?.data?.summary?.date).find(Boolean) || toDateKey(new Date());
       const recognizedRevenue = results
@@ -1678,7 +1770,7 @@
         .filter((value) => value > 0);
       const recognizedThousandTicketUsers = new Set(
         allRecognizedAudience
-          .filter((item) => toNumber(item.contributionHeat) > 1000)
+          .filter((item) => toNumber(item.contributionHeat) >= MIN_PROFILE_PROMPT_HEAT)
           .map((item) => String(item.audienceId || item.nickname).toLowerCase().replace(/\s+/g, ""))
           .filter(Boolean)
       ).size;
@@ -1699,8 +1791,8 @@
       $("#captureSRate").value = (sRevenueRate * 100).toFixed(1);
       state.hasParsedLiveCapture = true;
       $("#recordBtn").disabled = false;
-      setImportStatus(`解析完成：收入 ${formatCurrency(recognizedRevenue)}，榜单 >1000 共 ${thousandTicketUsers} 人，匹配 S 档案支持率 ${formatPercent(sRevenueRate)}。确认后点击“记录”。`);
-      showToast(`已识别 ${state.recognizedAudience.length} 位符合条件的观众`);
+      setImportStatus(`解析完成：共识别 ${allRecognizedAudience.length} 位观众；前三名且热度 ≥1000 的 ${state.profilePromptAudience.length} 位会在记录时询问是否加入档案。`);
+      showToast(`已识别 ${allRecognizedAudience.length} 位观众`);
     } catch (error) {
       state.hasParsedLiveCapture = false;
       $("#recordBtn").disabled = true;
@@ -1754,7 +1846,7 @@
       $("#authEmail").focus();
       return;
     }
-    if (state.recognizedAudience.length) {
+    if (state.selectedImages.length && state.hasParsedLiveCapture) {
       const button = $("#recordBtn");
       button.disabled = true;
       button.textContent = "匹配档案中…";
@@ -1963,6 +2055,7 @@
       }
       const id = $("#userId").value;
       const existing = state.users.find((user) => user.id === id);
+      const draftSource = state.userFormDraft || {};
       const manualTags = dedupe([
         ...$$('input[name="tags"]:checked').map((input) => input.value),
         ...splitTags($("#customTags").value)
@@ -1975,8 +2068,8 @@
       const user = normalizeUser({
         id: id || (state.cloudEnabled && state.currentUser ? "" : uid()),
         nickname,
-        audienceId: existing?.audienceId || "",
-        level: existing?.level || "",
+        audienceId: existing?.audienceId || draftSource.audienceId || "",
+        level: existing?.level || draftSource.level || "",
         tier: manualTier,
         tierSource: "manual",
         birthday: $("#birthday").value,
@@ -1986,8 +2079,8 @@
         recentEvent: $("#recentEvent").value.trim(),
         topics: $("#topics").value.trim(),
         amount: Number($("#amount").value || 0),
-        totalLiveCount: Number(existing?.totalLiveCount || 0),
-        appearedCount: Number(existing?.appearedCount || 0),
+        totalLiveCount: Number(existing?.totalLiveCount ?? draftSource.totalLiveCount ?? 0),
+        appearedCount: Number(existing?.appearedCount ?? draftSource.appearedCount ?? 0),
         supportedCount: Number($("#supportedCount").value || 0),
         latestSingleSpendAmount: Number($("#latestSingleSpendAmount").value || 0),
         maxSingleSpendAmount: Number($("#maxSingleSpendAmount").value || 0),
@@ -1997,11 +2090,11 @@
         hasOfflineMealRequest: $("#hasOfflineMealRequest").checked,
         isOnlyRankAndChat: $("#isOnlyRankAndChat").checked,
         maintenance: $("#maintenance").value.trim(),
-        createdAt: existing?.createdAt || new Date().toISOString(),
+        createdAt: existing?.createdAt || draftSource.createdAt || new Date().toISOString(),
         firstInteraction: dateOnlyISOString($("#firstInteraction").value) || existing?.firstInteraction || "",
         lastInteraction: dateOnlyISOString($("#lastInteraction").value) || existing?.lastInteraction || "",
-        createdVia: existing?.createdVia || "manual",
-        interactions: existing?.interactions || []
+        createdVia: existing?.createdVia || draftSource.createdVia || "manual",
+        interactions: existing?.interactions || draftSource.interactions || []
       });
       try {
         const saved = await persistUser(user, existing?.tier || null, "manual");
@@ -2010,6 +2103,10 @@
           ? state.users.map((item) => item.id === id ? normalized : item)
           : [normalized, ...state.users];
         if (!state.cloudEnabled) saveLocalUsers();
+        const completion = state.userFormCompletion;
+        state.userFormCompletion = null;
+        state.userFormDraft = null;
+        if (completion) completion(normalized);
         $("#userDialog").close();
         renderUsers();
         showToast(`${existing ? "档案已更新" : "新用户已收进记录本"}，当前为 ${normalized.tier} 级`);
@@ -2095,6 +2192,14 @@
       dialog.addEventListener("click", (event) => {
         if (event.target === dialog) dialog.close();
       });
+    });
+    $("#userDialog").addEventListener("close", () => {
+      if (state.userFormCompletion) {
+        const completion = state.userFormCompletion;
+        state.userFormCompletion = null;
+        completion(null);
+      }
+      state.userFormDraft = null;
     });
 
     $("#imageInput").addEventListener("change", (event) => setSelectedImages(event.target.files));

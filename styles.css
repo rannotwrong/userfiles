@@ -692,6 +692,12 @@ textarea {
   background: var(--surface-soft);
   transition: border-color 160ms ease, background 160ms ease;
 }
+.dropzone.has-preview {
+  place-items: stretch;
+  text-align: left;
+  border-style: solid;
+  background: linear-gradient(180deg, rgba(248, 251, 255, .92), rgba(255, 255, 255, .96));
+}
 .dropzone.dragging {
   border-color: var(--primary);
   background: var(--primary-soft);
@@ -707,8 +713,53 @@ textarea {
   height: 24px;
   color: var(--primary);
 }
+.dropzone-prompt {
+  display: grid;
+  place-items: center;
+  gap: var(--space-1);
+}
 .dropzone strong { color: var(--text); font-size: 14px; }
 .dropzone small { font-size: 12px; }
+.upload-preview-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.upload-preview-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.upload-preview-card img {
+  display: block;
+  width: 100%;
+  height: 96px;
+  object-fit: cover;
+  background: var(--surface-soft);
+}
+.upload-preview-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 8px 10px;
+}
+.upload-preview-meta strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.upload-preview-meta small {
+  flex: 0 0 auto;
+  color: var(--success);
+  font-weight: 650;
+}
 .capture-result-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1091,6 +1142,9 @@ dialog {
   background: var(--surface);
   box-shadow: 0 28px 88px rgba(16, 24, 40, .22);
 }
+dialog.compact-dialog {
+  width: min(480px, calc(100% - 20px));
+}
 dialog::backdrop {
   background: rgba(15, 23, 42, .36);
   backdrop-filter: blur(4px);
@@ -1125,6 +1179,26 @@ dialog::backdrop {
 .dialog-body {
   padding: 20px 20px 24px;
   overflow: auto;
+}
+.audience-prompt-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(248, 251, 255, .92), rgba(255, 255, 255, .96));
+}
+.audience-prompt-card h3 {
+  margin: 0 0 3px;
+  font-size: 18px;
+  letter-spacing: -.02em;
+}
+.audience-prompt-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 .form-grid {
   display: grid;
