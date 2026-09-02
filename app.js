@@ -914,6 +914,7 @@
     $("#dailyEditForm").hidden = true;
     $("#dailyMetrics").hidden = false;
     $("#editDailyBtn").hidden = false;
+    $("#deleteDailyBtn").hidden = false;
   }
 
   function openDailyEditor() {
@@ -926,6 +927,7 @@
     $("#editDailyFirstPaidUsers").value = toNumber(daily.firstPaidUsers);
     $("#dailyMetrics").hidden = true;
     $("#editDailyBtn").hidden = true;
+    $("#deleteDailyBtn").hidden = true;
     $("#dailyEditForm").hidden = false;
   }
 
@@ -1014,7 +1016,7 @@
       showToast(error.message || "日维度数据删除失败");
     } finally {
       button.disabled = false;
-      button.textContent = "删除该日数据";
+      button.textContent = "删除";
     }
   }
 
@@ -1836,8 +1838,11 @@
     });
     $("#dailyDate").addEventListener("change", (event) => {
       state.trendFilters.dailyDate = event.target.value || toDateKey(new Date());
-      closeDailyEditor();
-      renderTrends();
+      if ($("#dailyEditForm").hidden) {
+        renderTrends();
+      } else {
+        showToast(`当前编辑内容将保存到 ${state.trendFilters.dailyDate}`);
+      }
     });
     $("#editDailyBtn").addEventListener("click", openDailyEditor);
     $("#deleteDailyBtn").addEventListener("click", deleteDailyData);
