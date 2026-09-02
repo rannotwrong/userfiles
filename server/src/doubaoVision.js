@@ -58,6 +58,8 @@ function normalizeRecognitionPayload(json = {}, rawText = "") {
     .filter((item) => item.audienceId || item.nickname);
   const text = [
     summary.date ? `日期：${summary.date}` : "",
+    summary.revenue ? `本场总收入：${summary.revenue}` : "",
+    summary.giftUsers ? `送礼人数：${summary.giftUsers}` : "",
     summary.thousandTicketUsers ? `千票人数：${summary.thousandTicketUsers}` : "",
     ...audience.map((item) => `第${item.rank || "?"}名：${item.nickname || item.audienceId}（ID：${item.audienceId || "未识别"}，贡献热度：${item.contributionHeat}${item.isFirstGift ? "，首次送礼" : ""}）`)
   ].filter(Boolean).join("\n");
@@ -71,26 +73,28 @@ function normalizeRecognitionPayload(json = {}, rawText = "") {
   };
 }
 
-export async function recognizeLiveImageWithDoubao({ imageBase64, mimeType, text = "" } = {}) {
+export async function recognizeLiveImagesWithDoubao({ images = [], text = "" } = {}) {
   const apiKey = process.env.ARK_API_KEY || process.env.DOUBAO_API_KEY;
   const model = process.env.DOUBAO_VISION_MODEL || DEFAULT_MODEL;
-  const imageUrl = normalizeBase64Image(imageBase64, mimeType);
+  const imageContents = images
+    .slice(0, 2)
+    .map((image = {}) => normalizeBase64Image(image.imageBase64, image.mimeType))
+    .filter(Boolean)
+    .map((image_url) => ({ type: "input_image", image_url }));
 
   if (!apiKey) {
     throw new Error("服务端未配置 ARK_API_KEY，无法调用豆包图片识别。");
   }
-  if (!imageUrl) {
+  if (!imageContents.length) {
     throw new Error("缺少图片内容。");
   }
 
   const prompt = [
-    "你是直播截图数据识别助手。只返回严格 JSON，不要输出 Markdown。",
-    "先识别截图上方/总览/统计区域，再识别榜单明细。总览区域出现的 date、revenue、giftUsers、thousandTicketUsers、totalHeat 必须优先采用，不要用用户明细推算值覆盖总览数字。",
-    "JSON 字段固定为：",
-    "{\"date\":\"YYYY-MM-DD\",\"revenue\":0,\"giftUsers\":0,\"thousandTicketUsers\":0,\"totalHeat\":0,\"audience\":[{\"rank\":1,\"audienceId\":\"\",\"nickname\":\"\",\"contributionHeat\":0,\"isFirstGift\":false}],\"confidence\":0.0}",
-    "revenue 只读取明确标注“总收入/本场收入/直播收入/收入”的数值，不得用热度换算。giftUsers、thousandTicketUsers 优先读取总览字段；若总览没有，才用可见榜单辅助估算。thousandTicketUsers 表示贡献热度大于等于 1000 的去重用户数。",
-    "audience 列出截图中可辨认的排行榜用户，仅作为辅助：rank 为名次；audienceId 保留原始字符；nickname 为昵称；contributionHeat 为该用户贡献热度；isFirstGift 仅在明确出现首次送礼等标记时为 true。",
-    "不要输出聊天内容、观看人数、评分、画像、标签或其它无关信息。看不清就用 0、空字符串或 false，不要编造。",
+    "识别直播榜单截图，只返回紧凑 JSON。",
+    "总览优先：date、revenue、giftUsers、thousandTicketUsers、totalHeat 必须优先读截图总览/统计区；总览没有时才用榜单明细估算。",
+    "JSON：{\"date\":\"YYYY-MM-DD\",\"revenue\":0,\"giftUsers\":0,\"thousandTicketUsers\":0,\"totalHeat\":0,\"audience\":[{\"rank\":1,\"audienceId\":\"\",\"nickname\":\"\",\"contributionHeat\":0,\"isFirstGift\":false}],\"confidence\":0.0}",
+    "revenue 只读明确收入/流水/音浪字段。普通平台热度不等于收入；视频号无音浪时可将热度按收入处理。",
+    "audience 只列可见榜单用户，作为档案匹配辅助。看不清填 0/空字符串/false，不编造。",
     text ? `用户补充描述：${text}` : ""
   ].filter(Boolean).join("\n");
 
@@ -106,10 +110,7 @@ export async function recognizeLiveImageWithDoubao({ imageBase64, mimeType, text
         {
           role: "user",
           content: [
-            {
-              type: "input_image",
-              image_url: imageUrl
-            },
+            ...imageContents,
             {
               type: "input_text",
               text: prompt
@@ -138,4 +139,11 @@ export async function recognizeLiveImageWithDoubao({ imageBase64, mimeType, text
   const rawText = extractTextFromResponse(payload);
   const json = parseJsonText(rawText);
   return normalizeRecognitionPayload(json, rawText);
+}
+
+export async function recognizeLiveImageWithDoubao({ imageBase64, mimeType, text = "" } = {}) {
+  return recognizeLiveImagesWithDoubao({
+    images: [{ imageBase64, mimeType }],
+    text
+  });
 }

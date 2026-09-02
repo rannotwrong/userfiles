@@ -1721,6 +1721,7 @@
     state.recognitionDate = "";
     state.hasParsedLiveCapture = false;
     $("#recordBtn").disabled = true;
+    window.NotebookAPI.warmUpProxy?.();
     $("#captureRevenue").value = 0;
     $("#captureGiftUsers").value = 0;
     $("#captureThousandTicketUsers").value = 0;
@@ -1745,14 +1746,16 @@
     setImportStatus(`正在识别 ${state.selectedImages.length} 张图片中的全部观众…`);
 
     try {
-      const progressByImage = state.selectedImages.map(() => 0);
-      const results = await Promise.all(state.selectedImages.map((file, index) => (
-        window.NotebookAPI.recognizeLiveImage(file, (value) => {
-          progressByImage[index] = value;
-          const total = progressByImage.reduce((sum, item) => sum + item, 0) / progressByImage.length;
-          $("#progressBar").style.width = `${total}%`;
+      const results = window.NotebookAPI.recognizeLiveImages
+        ? await window.NotebookAPI.recognizeLiveImages(state.selectedImages, (value) => {
+          $("#progressBar").style.width = `${value}%`;
         })
-      )));
+        : await Promise.all(state.selectedImages.map((file, index) => (
+          window.NotebookAPI.recognizeLiveImage(file, (value) => {
+            const total = (index * 100 + value) / state.selectedImages.length;
+            $("#progressBar").style.width = `${total}%`;
+          })
+        )));
       const allRecognizedAudience = mergeRecognizedAudience(results);
       state.recognizedAudience = allRecognizedAudience;
       state.profilePromptAudience = allRecognizedAudience

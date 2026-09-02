@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { recognizeLiveImageWithDoubao } from "./doubaoVision.js";
+import { recognizeLiveImageWithDoubao, recognizeLiveImagesWithDoubao } from "./doubaoVision.js";
 import { parseLiveRecordText } from "./liveRecordParser.js";
 
 const app = express();
@@ -46,6 +46,23 @@ app.post("/api/live-records/recognize-image", requireProxyToken, async (req, res
   try {
     const { imageBase64 = "", mimeType = "image/png", text = "" } = req.body || {};
     const data = await recognizeLiveImageWithDoubao({ imageBase64, mimeType, text });
+    res.json({
+      code: 0,
+      data,
+      provider: "doubao"
+    });
+  } catch (error) {
+    res.status(500).json({
+      code: 500,
+      message: error.message || "图片识别失败"
+    });
+  }
+});
+
+app.post("/api/live-records/recognize-images", requireProxyToken, async (req, res) => {
+  try {
+    const { images = [], text = "" } = req.body || {};
+    const data = await recognizeLiveImagesWithDoubao({ images, text });
     res.json({
       code: 0,
       data,

@@ -3,6 +3,7 @@
   const config = window.UserAtlasSupabaseConfig || {};
   const proxyBaseUrl = String(config.aiProxyUrl || "").replace(/\/$/, "");
   const proxyToken = String(config.aiProxyToken || "");
+  let lastWarmUpAt = 0;
 
   function fileToDataUrl(file) {
     return new Promise((resolve, reject) => {
@@ -30,8 +31,8 @@
   }
 
   async function compressImageForRecognition(file) {
-    const maxSide = 1600;
-    const quality = 0.78;
+    const maxSide = 1080;
+    const quality = 0.66;
     const image = await loadImageFromFile(file);
     const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
     const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
@@ -55,6 +56,14 @@
       mimeType: match?.[1] || "image/png",
       imageBase64: match?.[2] || ""
     };
+  }
+
+  function warmUpProxy() {
+    if (!proxyBaseUrl) return;
+    const now = Date.now();
+    if (now - lastWarmUpAt < 120000) return;
+    lastWarmUpAt = now;
+    fetch(`${proxyBaseUrl}/api/health`, { cache: "no-store" }).catch(() => {});
   }
 
   async function requestProxy(path, payload) {
@@ -167,6 +176,34 @@
   }
 
   window.NotebookAPI = {
+    warmUpProxy,
+
+    async recognizeLiveImages(files, onProgress) {
+      const images = [...(files || [])].filter((file) => file?.type?.startsWith("image/")).slice(0, 2);
+      if (!images.length) throw new Error("请选择图片文件");
+      onProgress?.(6);
+      const optimizedFiles = [];
+      for (let index = 0; index < images.length; index += 1) {
+        optimizedFiles.push(await compressImageForRecognition(images[index]));
+        onProgress?.(6 + Math.round(((index + 1) / images.length) * 24));
+      }
+      const encodedImages = [];
+      for (let index = 0; index < optimizedFiles.length; index += 1) {
+        const dataUrl = await fileToDataUrl(optimizedFiles[index]);
+        encodedImages.push(splitDataUrl(dataUrl));
+        onProgress?.(30 + Math.round(((index + 1) / optimizedFiles.length) * 20));
+      }
+      if (proxyBaseUrl) {
+        const result = await requestProxy("/api/live-records/recognize-images", {
+          images: encodedImages,
+          text: ""
+        });
+        onProgress?.(100);
+        return [result];
+      }
+      return Promise.all(optimizedFiles.map((file) => this.recognizeLiveImage(file, onProgress)));
+    },
+
     async recognizeLiveImage(file, onProgress) {
       if (!file || !file.type.startsWith("image/")) {
         throw new Error("请选择图片文件");
