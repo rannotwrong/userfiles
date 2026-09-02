@@ -1105,7 +1105,7 @@
     $("#dailyMetrics").innerHTML = [
       metricCard("日收入", formatCurrency(daily.revenue)),
       metricCard("支持用户数", `${daily.paidUsers} 人`),
-      metricCard("榜单 >1000 人数", `${daily.thousandTicketUsers || 0} 人`),
+      metricCard("千票人数", `${daily.thousandTicketUsers || 0} 人`),
       metricCard("S级用户支持率", formatPercent(daily.sRevenueRate)),
       metricCard("直播描述", daily.description || "暂无描述")
     ].join("");
