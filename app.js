@@ -199,6 +199,45 @@
     };
   }
 
+  function getMonthlyLiveCount(monthKey = toMonthKey(new Date())) {
+    const sessionCount = (state.liveSessions || [])
+      .map(normalizeLiveSessionRecord)
+      .filter((session) => session.date?.startsWith(monthKey))
+      .length;
+    if (sessionCount) return sessionCount;
+
+    const dailyHistory = Array.isArray(state.trends?.dailyHistory) ? state.trends.dailyHistory : [];
+    const activeDays = dailyHistory
+      .filter((item) => item.date?.startsWith(monthKey))
+      .filter((item) => (
+        toNumber(item.revenue) ||
+        toNumber(item.paidUsers) ||
+        toNumber(item.thousandTicketUsers) ||
+        String(item.description || "").trim()
+      ));
+    if (activeDays.length) return activeDays.length;
+
+    return 0;
+  }
+
+  function getDisplayUserMetrics(user, monthKey = toMonthKey(new Date())) {
+    const metrics = getUserMetrics(user);
+    const interactions = Array.isArray(user.interactions) ? user.interactions : [];
+    const monthlySupportedFromLogs = interactions
+      .filter((item) => toMonthKey(item.time || item.date || "") === monthKey)
+      .filter((item) => item.supported || toNumber(item.spendAmount) > 0)
+      .length;
+    const supportedCount = interactions.length ? monthlySupportedFromLogs : toNumber(user.supportedCount);
+    const globalMonthlyLiveCount = getMonthlyLiveCount(monthKey);
+    const totalLiveCount = globalMonthlyLiveCount || metrics.totalLiveCount;
+    return {
+      ...metrics,
+      totalLiveCount,
+      supportedCount,
+      supportRate: totalLiveCount > 0 ? supportedCount / totalLiveCount : 0
+    };
+  }
+
   function classifyTier(metrics) {
     if (metrics.supportRate > 0.5 && metrics.totalSpendAmount > 10000 && metrics.isWillingToReply) {
       return { tier: "S", rule: "S级：支持率 > 50%，总消费金额 > 10000，且愿意接话" };
@@ -596,7 +635,9 @@
 
     $("#resultCount").textContent = `${filtered.length} 位`;
     $("#userGrid").innerHTML = filtered.length
-      ? filtered.map((user) => `
+      ? filtered.map((user) => {
+        const metrics = getDisplayUserMetrics(user);
+        return `
         <button class="user-card" type="button" data-user-id="${escapeHTML(user.id)}" aria-label="查看 ${escapeHTML(user.nickname)} 的完整档案">
           <span class="card-top">
             <span class="identity">
@@ -618,11 +659,12 @@
             </span>
             <span>
               <span class="meta-label">本月支持 / 累计消费</span>
-              <span class="meta-value">${user.supportedCount || 0} 次 · ¥ ${Number(user.amount || 0).toLocaleString("zh-CN")}</span>
+              <span class="meta-value">${metrics.supportedCount || 0} 次 · ¥ ${Number(user.amount || 0).toLocaleString("zh-CN")}</span>
             </span>
           </span>
         </button>
-      `).join("")
+      `;
+      }).join("")
       : emptyStateHTML();
 
     $$("[data-user-id]").forEach((card) => {
@@ -1204,6 +1246,7 @@
   function openDetail(id) {
     const user = state.users.find((item) => item.id === id);
     if (!user) return;
+    const metrics = getDisplayUserMetrics(user);
     state.detailUserId = id;
     const rows = [
       ["职业", user.occupation || "未记录"],
@@ -1215,8 +1258,9 @@
       ["聊过的话题", user.topics || "未记录"],
       ["消费情况", `累计 ¥ ${Number(user.amount || 0).toLocaleString("zh-CN")}`],
       ["分层来源", user.tierSource === "system" ? "系统根据直播互动自动判定" : "人工设定"],
-      ["本月支持次数", `${user.supportedCount || 0} 次`],
-      ["支持率", `${formatPercent(user.supportRate || 0)}（本月支持 ${user.supportedCount || 0} / 直播 ${user.totalLiveCount || 0}）`],
+      ["本月直播次数", `${metrics.totalLiveCount || 0} 次`],
+      ["本月支持次数", `${metrics.supportedCount || 0} 次`],
+      ["支持率", `${formatPercent(metrics.supportRate || 0)}（本月支持 ${metrics.supportedCount || 0} / 直播 ${metrics.totalLiveCount || 0}）`],
       ["单次消费", `最近 ¥ ${Number(user.latestSingleSpendAmount || 0).toLocaleString("zh-CN")}；最高 ¥ ${Number(user.maxSingleSpendAmount || 0).toLocaleString("zh-CN")}；单笔 >1000 次数 ${user.highSingleSpendCount || 0}`],
       ["行为字段", [
         user.isWillingToReply ? "愿意接话" : "未记录接话",
@@ -1278,7 +1322,7 @@
     $("#interactionUserId").value = id;
     $("#interactionNote").value = "";
     $("#interactionSpend").value = 0;
-    $("#interactionTotalLive").value = (user?.totalLiveCount || 0) + 1;
+    $("#interactionTotalLive").value = Math.max(getMonthlyLiveCount(), user?.totalLiveCount || 0) + 1;
     $("#interactionSupported").checked = false;
     $("#interactionWilling").checked = false;
     $("#interactionOffline").checked = false;
