@@ -484,6 +484,7 @@
         revenue: Number(item.daily_revenue || 0),
         paidUsers: Number(item.paid_user_count || 0),
         firstPaidUsers: Number(item.first_paid_user_count || 0),
+        thousandTicketUsers: Number(item.new_potential_user_count || 0),
         sRevenueRate: Number(item.s_user_revenue_rate || 0),
         potentialUsers: Number(item.new_potential_user_count || 0)
       }));
@@ -601,12 +602,11 @@
     return `${Math.round(Number(value || 0) * 100)}%`;
   }
 
-  function metricCard(label, value, hint = "") {
+  function metricCard(label, value) {
     return `
       <article class="metric-card">
         <span>${escapeHTML(label)}</span>
         <strong>${escapeHTML(value)}</strong>
-        ${hint ? `<small>${escapeHTML(hint)}</small>` : ""}
       </article>`;
   }
 
@@ -703,6 +703,7 @@
       revenue: 0,
       paidUsers: 0,
       firstPaidUsers: 0,
+      thousandTicketUsers: 0,
       sRevenueRate: 0,
       potentialUsers: 0
     };
@@ -757,12 +758,14 @@
         revenue: 0,
         paidUsers: 0,
         firstPaidUsers: 0,
+        thousandTicketUsers: 0,
         sRevenue: 0,
         potentialUsers: 0
       };
       current.revenue += session.revenue;
       current.paidUsers += session.paidUsers;
       current.firstPaidUsers += session.firstPaidUsers;
+      current.thousandTicketUsers += session.thousandTicketUsers || session.potentialUsers;
       current.sRevenue += session.sRevenue;
       current.potentialUsers += session.potentialUsers;
       dailyMap.set(session.date, current);
@@ -883,6 +886,30 @@
       : (trends.monthly || { revenue: 0, potentialUsers: 0, trend: [] });
   }
 
+  function countProfilesCreatedInRange(start, end) {
+    const startTime = start.getTime();
+    const endTime = end.getTime();
+    return state.users.filter((user) => {
+      const createdAt = new Date(user.createdAt || "");
+      const time = createdAt.getTime();
+      return Number.isFinite(time) && time >= startTime && time < endTime;
+    }).length;
+  }
+
+  function countWeeklyNewProfiles(weekValue) {
+    const start = weekInputToStartDate(weekValue);
+    return countProfilesCreatedInRange(start, addDays(start, 7));
+  }
+
+  function countMonthlyNewProfiles(monthKey) {
+    const [year, month] = String(monthKey || "").split("-").map(Number);
+    if (!year || !month) return 0;
+    return countProfilesCreatedInRange(
+      new Date(year, month - 1, 1),
+      new Date(year, month, 1)
+    );
+  }
+
   function renderTrends() {
     const trends = state.trends || emptyTrends();
     const dailyDate = state.trendFilters.dailyDate || toDateKey(new Date());
@@ -891,6 +918,8 @@
     const daily = getDailyTrend(trends, dailyDate);
     const weekly = getWeeklyTrend(trends, weeklyPeriod);
     const monthly = getMonthlyTrend(trends, monthlyPeriod);
+    const weeklyNewProfiles = countWeeklyNewProfiles(weeklyPeriod);
+    const monthlyNewProfiles = countMonthlyNewProfiles(monthlyPeriod);
 
     $("#dailyDate").value = dailyDate;
     $("#weeklyPeriod").value = weeklyPeriod;
@@ -898,19 +927,19 @@
     renderMonthPlan(monthlyPeriod, monthly.revenue);
 
     $("#dailyMetrics").innerHTML = [
-      metricCard("日收入", formatCurrency(daily.revenue), `${dailyDate} 直播成交`),
-      metricCard("支持用户数", `${daily.paidUsers} 人`, "完成支持的用户"),
-      metricCard("首次支持用户", `${daily.firstPaidUsers} 人`, "首次完成支持"),
-      metricCard("S级用户支持率", formatPercent(daily.sRevenueRate), "S级用户收入 / 总收入"),
-      metricCard("新增潜力用户数", `${daily.potentialUsers} 人`, "新增 A/B 潜力池")
+      metricCard("日收入", formatCurrency(daily.revenue)),
+      metricCard("支持用户数", `${daily.paidUsers} 人`),
+      metricCard("千票用户数", `${daily.thousandTicketUsers || 0} 人`),
+      metricCard("S级用户支持率", formatPercent(daily.sRevenueRate)),
+      metricCard("首次送礼人数（千票）", `${daily.firstPaidUsers} 人`)
     ].join("");
     $("#weeklyMetrics").innerHTML = [
-      metricCard("周收入", formatCurrency(weekly.revenue), "所选周累计"),
-      metricCard("新增潜力用户数", `${weekly.potentialUsers} 人`, "所选周新增")
+      metricCard("周收入", formatCurrency(weekly.revenue)),
+      metricCard("新增用户档案", `${weeklyNewProfiles} 人`)
     ].join("");
     $("#monthlyMetrics").innerHTML = [
-      metricCard("月收入", formatCurrency(monthly.revenue), "所选月累计"),
-      metricCard("新增潜力用户数", `${monthly.potentialUsers} 人`, "所选月新增")
+      metricCard("月收入", formatCurrency(monthly.revenue)),
+      metricCard("新增用户档案", `${monthlyNewProfiles} 人`)
     ].join("");
     $("#weeklyChart").innerHTML = renderLineChart(weekly.trend || [], "weeklyRevenue");
     $("#monthlyChart").innerHTML = renderLineChart(monthly.trend || [], "monthlyRevenue");
@@ -1301,7 +1330,7 @@
       revenue: processed.reduce((sum, item) => sum + item.spendAmount, 0),
       giftUsers: processed.length,
       thousandTicketUsers: toNumber($("#captureThousandTicketUsers").value),
-      newGiftUsers: newUserCount,
+      newGiftUsers: processed.filter(({ audience }) => audience.isFirstGift && audience.contributionHeat >= 1000).length,
       topGift: "",
       score: 0
     };
@@ -1387,7 +1416,7 @@
       paidUsers: summary.giftUsers,
       thousandTicketUsers: summary.thousandTicketUsers,
       firstPaidUsers: summary.newGiftUsers,
-      potentialUsers: summary.newGiftUsers,
+      potentialUsers: summary.thousandTicketUsers,
       sRevenue: user?.tier === "S" ? Number(user.latestSingleSpendAmount || user.amount || 0) : 0,
       topGift: summary.topGift,
       score: summary.score,
