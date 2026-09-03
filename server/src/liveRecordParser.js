@@ -38,7 +38,8 @@ export function parseLiveRecordText(text = "") {
     /总收入[:：\s¥￥]*([0-9,，.]+)/,
     /本场收入[:：\s¥￥]*([0-9,，.]+)/,
     /直播收入[:：\s¥￥]*([0-9,，.]+)/,
-    /收入[:：\s¥￥]*([0-9,，.]+)/
+    /收入[:：\s¥￥]*([0-9,，.]+)/,
+    /视频号[\s\S]{0,24}热度[:：\s]*([0-9,，.]+)/
   ]);
 
   return {
@@ -63,6 +64,10 @@ export function parseLiveRecordText(text = "") {
       /S级用户支持率[:：\s]*([0-9.]+)\s*%?/i,
       /S率[:：\s]*([0-9.]+)\s*%?/i
     ])) / 100)),
+    topGift: firstMatch(source, [
+      /最高价值礼物[:：\s]*([^，,\n；;]+?)(?=\s*(日期|总收入|本场收入|直播收入|收入|送礼人数|支持人数|千票人数|千票用户|S级用户支持率|S率|评分|直播评分|$))/,
+      /最高礼物[:：\s]*([^，,\n；;]+?)(?=\s*(日期|总收入|本场收入|直播收入|收入|送礼人数|支持人数|千票人数|千票用户|S级用户支持率|S率|评分|直播评分|$))/
+    ]),
     score: Math.min(100, toInteger(firstMatch(source, [
       /评分[:：\s]*([0-9]+)/,
       /直播评分[:：\s]*([0-9]+)/,
@@ -80,6 +85,7 @@ export function mergeLiveSummary(primary = {}, fallbackText = "") {
     thousandTicketUsers: toInteger(primary.thousandTicketUsers ?? fallback.thousandTicketUsers),
     newGiftUsers: toInteger(primary.newGiftUsers ?? fallback.newGiftUsers),
     sRevenueRate: Math.max(0, Math.min(1, toNumber(primary.sRevenueRate ?? fallback.sRevenueRate))),
+    topGift: String(primary.topGift || fallback.topGift || "").trim(),
     score: Math.min(100, toInteger(primary.score ?? fallback.score))
   };
 }

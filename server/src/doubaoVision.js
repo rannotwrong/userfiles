@@ -41,6 +41,7 @@ function normalizeRecognitionPayload(json = {}, rawText = "") {
     thousandTicketUsers: json.thousandTicketUsers,
     newGiftUsers: json.newGiftUsers,
     sRevenueRate: json.sRevenueRate,
+    topGift: json.topGift,
     score: json.score
   }, rawText);
   const summary = {
@@ -62,6 +63,7 @@ function normalizeRecognitionPayload(json = {}, rawText = "") {
     summary.revenue ? `本场总收入：${summary.revenue}` : "",
     summary.giftUsers ? `送礼人数：${summary.giftUsers}` : "",
     summary.thousandTicketUsers ? `千票人数：${summary.thousandTicketUsers}` : "",
+    summary.topGift ? `最高价值礼物：${summary.topGift}` : "",
     ...audience.map((item) => `第${item.rank || "?"}名：${item.nickname || item.audienceId}（ID：${item.audienceId || "未识别"}，贡献热度：${item.contributionHeat}${item.isFirstGift ? "，首次送礼" : ""}）`)
   ].filter(Boolean).join("\n");
 
@@ -93,8 +95,8 @@ async function recognizeWithDoubao({ images = [], text = "", mode = "full" } = {
   const fastMode = mode === "fast";
   const prompt = [
     fastMode ? "极速识别直播截图，只返回紧凑 JSON。优先读总览/统计区，并只识别榜单前三名。" : "完整识别直播榜单截图，只返回紧凑 JSON。优先读总览/统计区，再识别所有可见榜单用户。",
-    "JSON：{\"date\":\"YYYY-MM-DD\",\"revenue\":0,\"giftUsers\":0,\"thousandTicketUsers\":0,\"totalHeat\":0,\"audience\":[{\"rank\":1,\"audienceId\":\"\",\"nickname\":\"\",\"contributionHeat\":0,\"isFirstGift\":false}],\"confidence\":0.0}",
-    "date、revenue、giftUsers、thousandTicketUsers、totalHeat 必须优先采用截图总览数字；总览没有时才用榜单辅助估算。",
+    "JSON：{\"date\":\"YYYY-MM-DD\",\"revenue\":0,\"giftUsers\":0,\"thousandTicketUsers\":0,\"totalHeat\":0,\"topGift\":\"\",\"audience\":[{\"rank\":1,\"audienceId\":\"\",\"nickname\":\"\",\"contributionHeat\":0,\"isFirstGift\":false}],\"confidence\":0.0}",
+    "date、revenue、giftUsers、thousandTicketUsers、totalHeat、topGift 必须优先采用截图总览数字；总览没有时才用榜单辅助估算。",
     "revenue 只读明确收入/流水/音浪字段。普通平台热度不等于收入；视频号无音浪时可将热度按收入处理。",
     fastMode ? "audience 最多返回前三名，按榜单顺序。" : "audience 返回所有可辨认榜单用户，按榜单顺序。",
     "看不清填 0/空字符串/false，不编造。",
