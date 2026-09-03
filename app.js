@@ -794,7 +794,7 @@
   function getMonthPlan(monthKey, monthlyRevenue = 0) {
     const saved = getTrendPlanStore()[monthKey] || {};
     return {
-      liveCount: toNumber(saved.liveCount),
+      liveCount: getMonthlyRecordedLiveDays(state.trends || emptyTrends(), monthKey),
       targetRevenue: toNumber(saved.targetRevenue),
       forecastRevenue: toNumber(saved.forecastRevenue),
       actualRevenue: toNumber(monthlyRevenue)
@@ -805,7 +805,6 @@
     const monthKey = state.trendFilters.monthPlanPeriod || toMonthKey(new Date());
     const store = getTrendPlanStore();
     store[monthKey] = {
-      liveCount: toNumber($("#monthLiveCount").value),
       targetRevenue: toNumber($("#monthTargetRevenue").value),
       forecastRevenue: toNumber($("#monthForecastRevenue").value)
     };
@@ -1035,6 +1034,32 @@
     return matchedMonth
       ? { revenue: matchedMonth.revenue, potentialUsers: matchedMonth.potentialUsers, trend: [matchedMonth] }
       : (trends.monthly || { revenue: 0, potentialUsers: 0, trend: [] });
+  }
+
+  function getMonthlyRecordedLiveDays(trends, monthKey) {
+    const dates = new Set();
+    (Array.isArray(trends.dailyHistory) ? trends.dailyHistory : [])
+      .filter((item) => String(item.date || "").startsWith(monthKey))
+      .forEach((item) => dates.add(item.date));
+    if (dates.size) return dates.size;
+
+    (state.liveSessions || [])
+      .map(normalizeLiveSessionRecord)
+      .filter((item) => String(item.date || "").startsWith(monthKey))
+      .forEach((item) => dates.add(item.date));
+    return dates.size;
+  }
+
+  function setDailyTrendDate(dateKey) {
+    state.trendFilters.dailyDate = dateKey || toDateKey(new Date());
+    if (!$("#dailyEditForm").hidden) closeDailyEditor();
+    renderTrends();
+  }
+
+  function shiftDailyTrendDate(offset) {
+    const current = state.trendFilters.dailyDate || toDateKey(new Date());
+    const next = toDateKey(addDays(`${current}T00:00:00`, offset));
+    setDailyTrendDate(next);
   }
 
   function countProfilesCreatedInRange(start, end) {
@@ -2147,15 +2172,10 @@
       button.addEventListener("click", () => switchView(button.dataset.viewTarget));
     });
     $("#dailyDate").addEventListener("change", (event) => {
-      state.trendFilters.dailyDate = event.target.value || toDateKey(new Date());
-      if ($("#dailyEditForm").hidden) {
-        renderTrends();
-      } else {
-        $("#dailyPeriodLabel").textContent = formatChineseDate(`${state.trendFilters.dailyDate}T00:00:00`);
-        $("#dailyTrendTitle").textContent = `${formatChineseDate(`${state.trendFilters.dailyDate}T00:00:00`)}数据`;
-        showToast(`当前编辑内容将保存到 ${formatChineseDate(`${state.trendFilters.dailyDate}T00:00:00`)}`);
-      }
+      setDailyTrendDate(event.target.value || toDateKey(new Date()));
     });
+    $("#prevDailyBtn").addEventListener("click", () => shiftDailyTrendDate(-1));
+    $("#nextDailyBtn").addEventListener("click", () => shiftDailyTrendDate(1));
     $("#editDailyBtn").addEventListener("click", openDailyEditor);
     $("#deleteDailyBtn").addEventListener("click", deleteDailyData);
     $("#cancelDailyEditBtn").addEventListener("click", closeDailyEditor);
@@ -2173,7 +2193,7 @@
       const monthly = getMonthlyTrend(state.trends || emptyTrends(), state.trendFilters.monthPlanPeriod);
       renderMonthPlan(state.trendFilters.monthPlanPeriod, monthly.revenue);
     });
-    ["monthLiveCount", "monthTargetRevenue", "monthForecastRevenue", "monthActualRevenue"].forEach((id) => {
+    ["monthTargetRevenue", "monthForecastRevenue"].forEach((id) => {
       $(`#${id}`).addEventListener("input", saveMonthPlan);
     });
 

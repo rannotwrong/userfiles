@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户日记">
   <title>用户日记 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260902-tier-rules-v2">
+  <link rel="stylesheet" href="./styles.css?v=20260903-daily-nav">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -107,7 +107,7 @@
           <label class="capture-field">
             <span>日期</span>
             <span class="date-field-control">
-              <strong id="captureDateDisplay">2026/09/02</strong>
+              <strong id="captureDateDisplay">2026/09/03</strong>
               <input id="captureDate" type="date" lang="zh-CN" aria-label="选择直播日期">
             </span>
           </label>
@@ -154,7 +154,7 @@
         </button>
       </nav>
 
-      <section class="workspace reveal reveal-3" data-view="profiles">
+      <section class="workspace reveal reveal-3" data-view="profiles" style="position: relative;">
         <div class="toolbar">
           <div class="search-wrap">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
@@ -217,9 +217,9 @@
             </div>
           </div>
           <div class="plan-grid">
-            <label class="plan-field">
+            <label class="plan-field" style="position: relative;">
               <span>本月直播次数</span>
-              <input id="monthLiveCount" type="number" min="0" step="1" value="0">
+              <input id="monthLiveCount" type="number" min="0" step="1" value="0" readonly>
             </label>
             <label class="plan-field">
               <span>目标收入</span>
@@ -236,17 +236,21 @@
           </div>
         </section>
 
-        <section class="trend-section" aria-labelledby="dailyTrendTitle">
+        <section class="trend-section" aria-labelledby="dailyTrendTitle" style="position: relative;">
           <div class="trend-section-head">
             <div>
               <p class="section-kicker">DAY</p>
-              <h3 id="dailyTrendTitle">2026/09/02数据</h3>
+              <h3 id="dailyTrendTitle">2026/09/03数据</h3>
             </div>
-            <label class="period-control date-picker-control" for="dailyDate">
-              <span>日期</span>
-              <strong id="dailyPeriodLabel">2026/09/02</strong>
-              <input id="dailyDate" type="date" lang="zh-CN" aria-label="选择日维度日期">
-            </label>
+            <div class="daily-nav">
+              <button class="day-nav-btn" id="prevDailyBtn" type="button" aria-label="查看上一天数据">‹</button>
+              <label class="period-control date-picker-control" for="dailyDate">
+                <span>日期</span>
+                <strong id="dailyPeriodLabel">2026/09/03</strong>
+                <input id="dailyDate" type="date" lang="zh-CN" aria-label="选择日维度日期">
+              </label>
+              <button class="day-nav-btn" id="nextDailyBtn" type="button" aria-label="查看下一天数据">›</button>
+            </div>
           </div>
           <div class="metric-grid metric-grid-five" id="dailyMetrics">
       <article class="metric-card">
@@ -440,51 +444,43 @@
           <div class="form-field full">
             <span class="field-label">核心标签（最多 3 个）</span>
             <div class="check-grid" id="tagOptions">
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="高额支持">
-        <span>高额支持</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="稳定陪伴">
-        <span>稳定陪伴</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="氛围带动">
-        <span>氛围带动</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="点歌偏好">
-        <span>点歌偏好</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="情绪支持">
-        <span>情绪支持</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="预算敏感">
-        <span>预算敏感</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="新进观望">
-        <span>新进观望</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="潜水守候">
-        <span>潜水守候</span>
-      </label>
-
-      <label class="check-chip">
-        <input type="checkbox" name="tags" value="目的用户">
-        <span>目的用户</span>
-      </label>
-    </div>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="高额支持">
+                <span>高额支持</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="稳定陪伴">
+                <span>稳定陪伴</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="氛围带动">
+                <span>氛围带动</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="点歌偏好">
+                <span>点歌偏好</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="情绪支持">
+                <span>情绪支持</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="预算敏感">
+                <span>预算敏感</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="新进观望">
+                <span>新进观望</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="潜水守候">
+                <span>潜水守候</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" name="tags" value="目的用户">
+                <span>目的用户</span>
+              </label>
+            </div>
             <label class="field-label" for="customTags">自定义标签</label>
             <input id="customTags" type="text" placeholder="多个标签用顿号或逗号分隔，如：生日快到、喜欢粤语歌">
             <p class="form-error" id="tagsError"></p>
@@ -639,7 +635,8 @@
   <script src="./cloudStore.js?v=20260902-plan-date-ocr"></script>
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260903-fast-ocr-bg"></script>
-  <script src="./app.js?v=20260903-fast-ocr-bg"></script>
+  <script src="./app.js?v=20260903-daily-nav"></script>
+
 
 
 
