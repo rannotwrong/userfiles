@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { recognizeLiveImageWithDoubao, recognizeLiveImagesWithDoubao } from "./doubaoVision.js";
+import { recognizeLiveImageWithDoubao, recognizeLiveImagesFastWithDoubao, recognizeLiveImagesWithDoubao } from "./doubaoVision.js";
 import { parseLiveRecordText } from "./liveRecordParser.js";
 
 const app = express();
@@ -72,6 +72,24 @@ app.post("/api/live-records/recognize-images", requireProxyToken, async (req, re
     res.status(500).json({
       code: 500,
       message: error.message || "图片识别失败"
+    });
+  }
+});
+
+app.post("/api/live-records/recognize-fast", requireProxyToken, async (req, res) => {
+  try {
+    const { images = [], text = "" } = req.body || {};
+    const data = await recognizeLiveImagesFastWithDoubao({ images, text });
+    res.json({
+      code: 0,
+      data,
+      provider: "doubao",
+      mode: "fast"
+    });
+  } catch (error) {
+    res.status(500).json({
+      code: 500,
+      message: error.message || "快速图片识别失败"
     });
   }
 });

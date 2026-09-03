@@ -40,6 +40,7 @@ function normalizeRecognitionPayload(json = {}, rawText = "") {
     giftUsers: json.giftUsers,
     thousandTicketUsers: json.thousandTicketUsers,
     newGiftUsers: json.newGiftUsers,
+    sRevenueRate: json.sRevenueRate,
     score: json.score
   }, rawText);
   const summary = {
@@ -73,7 +74,7 @@ function normalizeRecognitionPayload(json = {}, rawText = "") {
   };
 }
 
-export async function recognizeLiveImagesWithDoubao({ images = [], text = "" } = {}) {
+async function recognizeWithDoubao({ images = [], text = "", mode = "full" } = {}) {
   const apiKey = process.env.ARK_API_KEY || process.env.DOUBAO_API_KEY;
   const model = process.env.DOUBAO_VISION_MODEL || DEFAULT_MODEL;
   const imageContents = images
@@ -89,12 +90,14 @@ export async function recognizeLiveImagesWithDoubao({ images = [], text = "" } =
     throw new Error("缺少图片内容。");
   }
 
+  const fastMode = mode === "fast";
   const prompt = [
-    "识别直播榜单截图，只返回紧凑 JSON。",
-    "总览优先：date、revenue、giftUsers、thousandTicketUsers、totalHeat 必须优先读截图总览/统计区；总览没有时才用榜单明细估算。",
+    fastMode ? "极速识别直播截图，只返回紧凑 JSON。优先读总览/统计区，并只识别榜单前三名。" : "完整识别直播榜单截图，只返回紧凑 JSON。优先读总览/统计区，再识别所有可见榜单用户。",
     "JSON：{\"date\":\"YYYY-MM-DD\",\"revenue\":0,\"giftUsers\":0,\"thousandTicketUsers\":0,\"totalHeat\":0,\"audience\":[{\"rank\":1,\"audienceId\":\"\",\"nickname\":\"\",\"contributionHeat\":0,\"isFirstGift\":false}],\"confidence\":0.0}",
+    "date、revenue、giftUsers、thousandTicketUsers、totalHeat 必须优先采用截图总览数字；总览没有时才用榜单辅助估算。",
     "revenue 只读明确收入/流水/音浪字段。普通平台热度不等于收入；视频号无音浪时可将热度按收入处理。",
-    "audience 只列可见榜单用户，作为档案匹配辅助。看不清填 0/空字符串/false，不编造。",
+    fastMode ? "audience 最多返回前三名，按榜单顺序。" : "audience 返回所有可辨认榜单用户，按榜单顺序。",
+    "看不清填 0/空字符串/false，不编造。",
     text ? `用户补充描述：${text}` : ""
   ].filter(Boolean).join("\n");
 
@@ -139,6 +142,14 @@ export async function recognizeLiveImagesWithDoubao({ images = [], text = "" } =
   const rawText = extractTextFromResponse(payload);
   const json = parseJsonText(rawText);
   return normalizeRecognitionPayload(json, rawText);
+}
+
+export async function recognizeLiveImagesFastWithDoubao({ images = [], text = "" } = {}) {
+  return recognizeWithDoubao({ images, text, mode: "fast" });
+}
+
+export async function recognizeLiveImagesWithDoubao({ images = [], text = "" } = {}) {
+  return recognizeWithDoubao({ images, text, mode: "full" });
 }
 
 export async function recognizeLiveImageWithDoubao({ imageBase64, mimeType, text = "" } = {}) {

@@ -28,6 +28,8 @@
     recognizedAudience: [],
     profilePromptAudience: [],
     recognitionDate: "",
+    fullRecognitionRunId: 0,
+    fullRecognitionStatus: "idle",
     hasParsedLiveCapture: false,
     detailUserId: null,
     userFormDraft: null,
@@ -1409,6 +1411,8 @@
     state.recognizedAudience = [];
     state.profilePromptAudience = [];
     state.recognitionDate = "";
+    state.fullRecognitionRunId += 1;
+    state.fullRecognitionStatus = "idle";
     state.hasParsedLiveCapture = false;
     $("#recordBtn").disabled = true;
   }
@@ -1821,6 +1825,72 @@
     showToast(`已选择 ${state.selectedImages.length} 张图片`);
   }
 
+  function applyRecognitionResults(results = [], { mode = "fast", allowFieldOverwrite = true } = {}) {
+    const allRecognizedAudience = mergeRecognizedAudience(results);
+    state.recognizedAudience = allRecognizedAudience;
+    state.profilePromptAudience = allRecognizedAudience
+      .filter(shouldPromptAudienceProfile)
+      .slice(0, 3);
+    state.recognitionDate = results.map((result) => result?.data?.summary?.date).find(Boolean) || state.recognitionDate || toDateKey(new Date());
+
+    const recognizedRevenue = results
+      .map((result) => toNumber(result?.data?.summary?.revenue))
+      .find((value) => value > 0) || 0;
+    const recognizedGiftUsers = results
+      .map((result) => toNumber(result?.data?.summary?.giftUsers))
+      .find((value) => value > 0) || 0;
+    const reportedThousandTicketUsers = results
+      .map((result) => toNumber(result?.data?.summary?.thousandTicketUsers))
+      .filter((value) => value > 0);
+    const recognizedThousandTicketUsers = new Set(
+      allRecognizedAudience
+        .filter((item) => toNumber(item.contributionHeat) >= MIN_PROFILE_PROMPT_HEAT)
+        .map((item) => String(item.audienceId || item.nickname).toLowerCase().replace(/\s+/g, ""))
+        .filter(Boolean)
+    ).size;
+    const thousandTicketUsers = reportedThousandTicketUsers[0] || recognizedThousandTicketUsers;
+    const rankedSupporters = allRecognizedAudience.filter((item) => toNumber(item.contributionHeat) > 0);
+    const sSupporters = rankedSupporters.filter((item) => findSUserByAudience(item));
+    const reportedTotalHeat = Math.max(0, ...results.map((result) => toNumber(result?.data?.summary?.totalHeat)));
+    const totalHeat = reportedTotalHeat || rankedSupporters.reduce((sum, item) => sum + toNumber(item.contributionHeat), 0);
+    const sUserHeat = sSupporters.reduce((sum, item) => sum + toNumber(item.contributionHeat), 0);
+    const sRevenueRate = totalHeat > 0 ? sUserHeat / totalHeat : 0;
+
+    if (allowFieldOverwrite) {
+      $("#captureDate").value = state.recognitionDate;
+      updateCaptureDateDisplay();
+      if (recognizedRevenue) $("#captureRevenue").value = recognizedRevenue.toFixed(2);
+      if (recognizedGiftUsers || rankedSupporters.length) $("#captureGiftUsers").value = recognizedGiftUsers || rankedSupporters.length;
+      if (thousandTicketUsers) $("#captureThousandTicketUsers").value = thousandTicketUsers;
+    }
+    $("#captureSRate").value = (sRevenueRate * 100).toFixed(1);
+
+    return {
+      audienceCount: allRecognizedAudience.length,
+      promptCount: state.profilePromptAudience.length,
+      mode
+    };
+  }
+
+  function startFullRecognitionInBackground(files, runId) {
+    if (!window.NotebookAPI.recognizeLiveImages) return;
+    state.fullRecognitionStatus = "running";
+    window.NotebookAPI.recognizeLiveImages(files)
+      .then((results) => {
+        if (runId !== state.fullRecognitionRunId || !state.hasParsedLiveCapture) return;
+        const summary = applyRecognitionResults(results, { mode: "full", allowFieldOverwrite: false });
+        state.fullRecognitionStatus = "done";
+        setImportStatus(`基础数据已可记录，完整榜单已补全 ${summary.audienceCount} 位观众；前三名且热度 ≥1000 的 ${summary.promptCount} 位会在记录时询问是否加入档案。`);
+        showToast("完整榜单已补全");
+      })
+      .catch((error) => {
+        if (runId !== state.fullRecognitionRunId || !state.hasParsedLiveCapture) return;
+        state.fullRecognitionStatus = "failed";
+        console.warn("完整榜单后台补全失败。", error);
+        setImportStatus("基础数据已可记录；完整榜单后台补全失败，可直接记录或稍后重试解析。");
+      });
+  }
+
   async function recognizeImages() {
     if (!state.selectedImages.length) {
       showToast("请先选择一至两张图片");
@@ -1833,11 +1903,14 @@
     button.textContent = "识别中…";
     progress.hidden = false;
     $("#progressBar").style.width = "4%";
-    setImportStatus(`正在识别 ${state.selectedImages.length} 张图片中的全部观众…`);
+    const runId = state.fullRecognitionRunId + 1;
+    state.fullRecognitionRunId = runId;
+    state.fullRecognitionStatus = "idle";
+    setImportStatus("正在快速解析总览和榜单前三名…");
 
     try {
-      const results = window.NotebookAPI.recognizeLiveImages
-        ? await window.NotebookAPI.recognizeLiveImages(state.selectedImages, (value) => {
+      const results = window.NotebookAPI.recognizeLiveImagesFast
+        ? await window.NotebookAPI.recognizeLiveImagesFast(state.selectedImages, (value) => {
           $("#progressBar").style.width = `${value}%`;
         })
         : await Promise.all(state.selectedImages.map((file, index) => (
@@ -1846,44 +1919,12 @@
             $("#progressBar").style.width = `${total}%`;
           })
         )));
-      const allRecognizedAudience = mergeRecognizedAudience(results);
-      state.recognizedAudience = allRecognizedAudience;
-      state.profilePromptAudience = allRecognizedAudience
-        .filter(shouldPromptAudienceProfile)
-        .slice(0, 3);
-      state.recognitionDate = results.map((result) => result?.data?.summary?.date).find(Boolean) || toDateKey(new Date());
-      const recognizedRevenue = results
-        .map((result) => toNumber(result?.data?.summary?.revenue))
-        .find((value) => value > 0) || 0;
-      const recognizedGiftUsers = results
-        .map((result) => toNumber(result?.data?.summary?.giftUsers))
-        .find((value) => value > 0) || 0;
-      const reportedThousandTicketUsers = results
-        .map((result) => toNumber(result?.data?.summary?.thousandTicketUsers))
-        .filter((value) => value > 0);
-      const recognizedThousandTicketUsers = new Set(
-        allRecognizedAudience
-          .filter((item) => toNumber(item.contributionHeat) >= MIN_PROFILE_PROMPT_HEAT)
-          .map((item) => String(item.audienceId || item.nickname).toLowerCase().replace(/\s+/g, ""))
-          .filter(Boolean)
-      ).size;
-      const thousandTicketUsers = reportedThousandTicketUsers[0] || recognizedThousandTicketUsers;
-      const rankedSupporters = allRecognizedAudience.filter((item) => toNumber(item.contributionHeat) > 0);
-      const sSupporters = rankedSupporters.filter((item) => findSUserByAudience(item));
-      const reportedTotalHeat = Math.max(0, ...results.map((result) => toNumber(result?.data?.summary?.totalHeat)));
-      const totalHeat = reportedTotalHeat || rankedSupporters.reduce((sum, item) => sum + toNumber(item.contributionHeat), 0);
-      const sUserHeat = sSupporters.reduce((sum, item) => sum + toNumber(item.contributionHeat), 0);
-      const sRevenueRate = totalHeat > 0 ? sUserHeat / totalHeat : 0;
-      $("#captureDate").value = state.recognitionDate;
-      updateCaptureDateDisplay();
-      $("#captureRevenue").value = recognizedRevenue.toFixed(2);
-      $("#captureGiftUsers").value = recognizedGiftUsers || rankedSupporters.length;
-      $("#captureThousandTicketUsers").value = thousandTicketUsers;
-      $("#captureSRate").value = (sRevenueRate * 100).toFixed(1);
+      const summary = applyRecognitionResults(results, { mode: "fast", allowFieldOverwrite: true });
       state.hasParsedLiveCapture = true;
       $("#recordBtn").disabled = false;
-      setImportStatus(`解析完成：已按截图总览写入上方字段，并识别 ${allRecognizedAudience.length} 位观众；前三名且热度 ≥1000 的 ${state.profilePromptAudience.length} 位会在记录时询问是否加入档案。`);
-      showToast(`已识别 ${allRecognizedAudience.length} 位观众`);
+      setImportStatus(`快速解析完成：已写入核心数据，可先点击“记录”。正在后台补全完整榜单，当前已识别 ${summary.audienceCount} 位观众。`);
+      showToast("基础数据已解析，可先记录");
+      startFullRecognitionInBackground([...state.selectedImages], runId);
     } catch (error) {
       state.hasParsedLiveCapture = false;
       $("#recordBtn").disabled = true;

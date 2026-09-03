@@ -30,24 +30,44 @@
     });
   }
 
-  async function compressImageForRecognition(file) {
-    const maxSide = 1080;
-    const quality = 0.66;
+  async function compressImageForRecognition(file, options = {}) {
+    const maxSide = options.maxSide || 1080;
+    const quality = options.quality || 0.66;
+    const cropTopRatio = options.cropTopRatio || 1;
     const image = await loadImageFromFile(file);
-    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
-    const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
-    const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+    const sourceWidth = image.naturalWidth || image.width;
+    const sourceHeight = Math.max(1, Math.round((image.naturalHeight || image.height) * cropTopRatio));
+    const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
+    const width = Math.max(1, Math.round(sourceWidth * scale));
+    const height = Math.max(1, Math.round(sourceHeight * scale));
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d", { alpha: false });
-    context.drawImage(image, 0, 0, width, height);
+    context.drawImage(image, 0, 0, sourceWidth, sourceHeight, 0, 0, width, height);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
     if (!blob || blob.size >= file.size) return file;
     return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg") || "live-ranking.jpg", {
       type: "image/jpeg",
       lastModified: file.lastModified || Date.now()
     });
+  }
+
+  async function encodeImages(files, options = {}, onProgress = () => {}) {
+    const images = [...(files || [])].filter((file) => file?.type?.startsWith("image/")).slice(0, 2);
+    if (!images.length) throw new Error("请选择图片文件");
+    const optimizedFiles = [];
+    for (let index = 0; index < images.length; index += 1) {
+      optimizedFiles.push(await compressImageForRecognition(images[index], options));
+      onProgress(6 + Math.round(((index + 1) / images.length) * 24));
+    }
+    const encodedImages = [];
+    for (let index = 0; index < optimizedFiles.length; index += 1) {
+      const dataUrl = await fileToDataUrl(optimizedFiles[index]);
+      encodedImages.push(splitDataUrl(dataUrl));
+      onProgress(30 + Math.round(((index + 1) / optimizedFiles.length) * 20));
+    }
+    return { encodedImages, optimizedFiles };
   }
 
   function splitDataUrl(dataUrl) {
@@ -178,21 +198,27 @@
   window.NotebookAPI = {
     warmUpProxy,
 
-    async recognizeLiveImages(files, onProgress) {
-      const images = [...(files || [])].filter((file) => file?.type?.startsWith("image/")).slice(0, 2);
-      if (!images.length) throw new Error("请选择图片文件");
+    async recognizeLiveImagesFast(files, onProgress) {
       onProgress?.(6);
-      const optimizedFiles = [];
-      for (let index = 0; index < images.length; index += 1) {
-        optimizedFiles.push(await compressImageForRecognition(images[index]));
-        onProgress?.(6 + Math.round(((index + 1) / images.length) * 24));
+      const { encodedImages, optimizedFiles } = await encodeImages(
+        files,
+        { maxSide: 900, quality: 0.55, cropTopRatio: 0.68 },
+        (value) => onProgress?.(value)
+      );
+      if (proxyBaseUrl) {
+        const result = await requestProxy("/api/live-records/recognize-fast", {
+          images: encodedImages,
+          text: ""
+        });
+        onProgress?.(100);
+        return [result];
       }
-      const encodedImages = [];
-      for (let index = 0; index < optimizedFiles.length; index += 1) {
-        const dataUrl = await fileToDataUrl(optimizedFiles[index]);
-        encodedImages.push(splitDataUrl(dataUrl));
-        onProgress?.(30 + Math.round(((index + 1) / optimizedFiles.length) * 20));
-      }
+      return Promise.all(optimizedFiles.map((file) => this.recognizeLiveImage(file, onProgress)));
+    },
+
+    async recognizeLiveImages(files, onProgress) {
+      onProgress?.(6);
+      const { encodedImages, optimizedFiles } = await encodeImages(files, {}, (value) => onProgress?.(value));
       if (proxyBaseUrl) {
         const result = await requestProxy("/api/live-records/recognize-images", {
           images: encodedImages,
