@@ -1062,6 +1062,23 @@
     setDailyTrendDate(next);
   }
 
+  function openUploadSourceDialog() {
+    $("#uploadSourceDialog")?.showModal();
+  }
+
+  function triggerUploadSource(source) {
+    const map = {
+      album: "albumInput",
+      file: "imageInput",
+      camera: "cameraInput"
+    };
+    const input = document.getElementById(map[source] || "imageInput");
+    if (!input) return;
+    $("#uploadSourceDialog")?.close();
+    input.value = "";
+    input.click();
+  }
+
   function countProfilesCreatedInRange(start, end) {
     const startTime = start.getTime();
     const endTime = end.getTime();
@@ -2354,9 +2371,17 @@
       state.userFormDraft = null;
     });
 
-    $("#imageInput").addEventListener("change", (event) => setSelectedImages(event.target.files));
+    ["imageInput", "albumInput", "cameraInput"].forEach((id) => {
+      const input = document.getElementById(id);
+      input?.addEventListener("change", (event) => setSelectedImages(event.target.files));
+    });
     $("#captureDate").addEventListener("change", updateCaptureDateDisplay);
     const dropzone = $("#dropzone");
+    dropzone.addEventListener("click", (event) => {
+      if (event.target.matches("input[type='file']")) return;
+      event.preventDefault();
+      openUploadSourceDialog();
+    });
     ["dragenter", "dragover"].forEach((type) => {
       dropzone.addEventListener(type, (event) => {
         event.preventDefault();
@@ -2370,6 +2395,9 @@
       });
     });
     dropzone.addEventListener("drop", (event) => setSelectedImages(event.dataTransfer.files));
+    $$("[data-upload-source]").forEach((button) => {
+      button.addEventListener("click", () => triggerUploadSource(button.dataset.uploadSource));
+    });
     $("#parseBtn").addEventListener("click", parseCapture);
     $("#recordBtn").addEventListener("click", parseAndSave);
   }

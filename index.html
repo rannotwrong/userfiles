@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户日记">
   <title>用户日记 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260903-profile-grid">
+  <link rel="stylesheet" href="./styles.css?v=20260903-upload-source">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -96,6 +96,8 @@
         </div>
         <label class="dropzone" id="dropzone" style="position: relative;">
           <input id="imageInput" type="file" accept="image/*" multiple="">
+          <input id="albumInput" type="file" accept="image/*" multiple="">
+          <input id="cameraInput" type="file" accept="image/*" capture="environment">
           <div class="dropzone-prompt" id="uploadPrompt">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
             <strong>上传直播榜单截图</strong>
@@ -628,6 +630,34 @@
     </form>
   </dialog>
 
+  <dialog id="uploadSourceDialog" class="compact-dialog" aria-labelledby="uploadSourceTitle">
+    <div class="dialog-head">
+      <div>
+        <p class="section-kicker">UPLOAD</p>
+        <h2 id="uploadSourceTitle">选择上传方式</h2>
+      </div>
+      <button class="icon-btn" type="button" data-close="uploadSourceDialog" aria-label="关闭弹窗">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="upload-source-list" role="group" aria-label="选择图片来源">
+        <button class="upload-source-btn" type="button" data-upload-source="album">
+          <span>从相册选取</span>
+          <small>选择手机相册或图片库中的截图</small>
+        </button>
+        <button class="upload-source-btn" type="button" data-upload-source="file">
+          <span>从文件选取</span>
+          <small>选择本地文件夹中的图片</small>
+        </button>
+        <button class="upload-source-btn" type="button" data-upload-source="camera">
+          <span>拍照</span>
+          <small>直接拍摄当前直播榜单</small>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite">请先选择图片或填写文字</div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -635,7 +665,7 @@
   <script src="./cloudStore.js?v=20260902-plan-date-ocr"></script>
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260903-fast-ocr-bg"></script>
-  <script src="./app.js?v=20260903-daily-nav"></script>
+  <script src="./app.js?v=20260903-upload-source"></script>
 
 
 

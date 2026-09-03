@@ -762,6 +762,36 @@ textarea {
   color: var(--success);
   font-weight: 650;
 }
+.upload-source-list {
+  display: grid;
+  gap: var(--space-3);
+}
+.upload-source-btn {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+.upload-source-btn span {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 760;
+}
+.upload-source-btn small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.upload-source-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(18, 184, 200, .36);
+  background: var(--primary-soft);
+  box-shadow: var(--shadow-sm);
+}
 .capture-result-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
