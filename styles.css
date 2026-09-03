@@ -495,6 +495,7 @@ button:active { transform: translateY(1px) !important; }
 }
 .user-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
 .user-card {
@@ -599,6 +600,7 @@ button:active { transform: translateY(1px) !important; }
 }
 .stale { color: var(--danger); }
 .empty {
+  grid-column: 1 / -1;
   padding: var(--space-12) var(--space-4);
   text-align: center;
   color: var(--muted);
@@ -1388,7 +1390,7 @@ dialog::backdrop {
   }
   .search-wrap { max-width: 320px; }
   .filter-row { flex: 1; }
-  .user-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .user-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
   .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -1400,6 +1402,7 @@ dialog::backdrop {
     grid-template-areas: "toolbar" "list";
     align-items: start;
   }
+  .user-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
 }
 
 @media (max-width: 640px) {
@@ -1468,6 +1471,50 @@ dialog::backdrop {
   .filter-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .user-grid {
+    gap: var(--space-2);
+  }
+  .user-card {
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: 14px;
+  }
+  .card-top {
+    gap: var(--space-2);
+  }
+  .identity {
+    gap: var(--space-2);
+  }
+  .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+  .name {
+    max-width: none;
+    font-size: 14px;
+  }
+  .tier {
+    min-width: 30px;
+    height: 26px;
+    padding: 0 7px;
+    font-size: 12px;
+  }
+  .tag {
+    padding: 2px 7px;
+    font-size: 11px;
+  }
+  .card-meta {
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+  }
+  .meta-label {
+    font-size: 11px;
+  }
+  .meta-value {
+    font-size: 13px;
   }
   .filter-btn {
     justify-content: center;
