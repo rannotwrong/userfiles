@@ -759,9 +759,10 @@
     return `${Math.round(Number(value || 0) * 100)}%`;
   }
 
-  function metricCard(label, value) {
+  function metricCard(label, value, variant = "") {
+    const className = ["metric-card", variant ? `metric-card-${variant}` : ""].filter(Boolean).join(" ");
     return `
-      <article class="metric-card">
+      <article class="${className}">
         <span>${escapeHTML(label)}</span>
         <strong>${escapeHTML(value)}</strong>
       </article>`;
@@ -1285,7 +1286,7 @@
       metricCard("新千票人数", `${daily.newThousandUsers || 0} 人`),
       metricCard("榜一贡献", `${daily.topContributionHeat || 0}`),
       metricCard("S级用户支持率", formatPercent(daily.sRevenueRate)),
-      metricCard("直播描述", daily.description || "暂无描述")
+      metricCard("直播描述", daily.description || "暂无描述", "description")
     ].join("");
     $("#weeklyMetrics").innerHTML = [
       metricCard("周收入", formatCurrency(weekly.revenue)),

@@ -1078,8 +1078,8 @@ textarea {
   gap: var(--space-3);
 }
 .metric-card {
-  min-height: 86px;
-  padding: 14px 16px;
+  min-height: 78px;
+  padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background:
@@ -1088,18 +1088,27 @@ textarea {
 }
 .metric-card strong {
   display: block;
-  margin-top: 6px;
+  margin-top: 5px;
   color: var(--text);
-  font-size: clamp(18px, 2.2vw, 22px);
-  font-weight: 760;
-  line-height: 1.18;
-  letter-spacing: -.025em;
+  font-size: clamp(16px, 1.9vw, 18px);
+  font-weight: 720;
+  line-height: 1.2;
+  letter-spacing: -.015em;
 }
 .metric-card span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: .02em;
+}
+.metric-card-description strong {
+  max-width: 100%;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.45;
+  letter-spacing: 0;
+  word-break: break-word;
 }
 .metric-card small {
   display: block;
