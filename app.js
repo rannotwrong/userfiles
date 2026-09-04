@@ -866,6 +866,8 @@
       paidUsers: 0,
       firstPaidUsers: 0,
       thousandTicketUsers: 0,
+      newThousandUsers: 0,
+      topContributionHeat: 0,
       sRevenueRate: 0,
       potentialUsers: 0,
       description: ""
@@ -890,6 +892,8 @@
     const firstPaidUsers = toNumber(input.firstPaidUsers ?? input.newGiftUsers ?? input.first_paid_user_count);
     const potentialUsers = toNumber(input.potentialUsers ?? input.newPotentialUsers ?? input.new_potential_user_count ?? firstPaidUsers);
     const thousandTicketUsers = toNumber(input.thousandTicketUsers ?? input.thousand_ticket_user_count);
+    const newThousandUsers = toNumber(input.newThousandUsers ?? input.new_thousand_user_count);
+    const topContributionHeat = toNumber(input.topContributionHeat ?? input.top_contribution_heat);
     const sRevenue = toNumber(input.sRevenue ?? input.s_user_revenue);
     return {
       id: input.id || uid(),
@@ -899,6 +903,8 @@
       firstPaidUsers,
       potentialUsers,
       thousandTicketUsers,
+      newThousandUsers,
+      topContributionHeat,
       sRevenue,
       score: toNumber(input.score),
       rawText: input.rawText || input.raw_record_text || "",
@@ -922,6 +928,8 @@
         paidUsers: 0,
         firstPaidUsers: 0,
         thousandTicketUsers: 0,
+        newThousandUsers: 0,
+        topContributionHeat: 0,
         sRevenue: 0,
         potentialUsers: 0,
         descriptions: []
@@ -930,6 +938,8 @@
       current.paidUsers += session.paidUsers;
       current.firstPaidUsers += session.firstPaidUsers;
       current.thousandTicketUsers += session.thousandTicketUsers || session.potentialUsers;
+      current.newThousandUsers += session.newThousandUsers;
+      current.topContributionHeat = Math.max(current.topContributionHeat, session.topContributionHeat);
       current.sRevenue += session.sRevenue;
       current.potentialUsers += session.potentialUsers;
       if (session.description && !current.descriptions.includes(session.description)) {
@@ -1080,23 +1090,6 @@
     setDailyTrendDate(next);
   }
 
-  function openUploadSourceDialog() {
-    $("#uploadSourceDialog")?.showModal();
-  }
-
-  function triggerUploadSource(source) {
-    const map = {
-      album: "albumInput",
-      file: "imageInput",
-      camera: "cameraInput"
-    };
-    const input = document.getElementById(map[source] || "imageInput");
-    if (!input) return;
-    $("#uploadSourceDialog")?.close();
-    input.value = "";
-    input.click();
-  }
-
   function countProfilesFirstPaidInRange(start, end) {
     const startTime = start.getTime();
     const endTime = end.getTime();
@@ -1144,6 +1137,8 @@
     $("#editDailyRevenue").value = toNumber(daily.revenue);
     $("#editDailyPaidUsers").value = toNumber(daily.paidUsers);
     $("#editDailyThousandUsers").value = toNumber(daily.thousandTicketUsers);
+    $("#editDailyNewThousandUsers").value = toNumber(daily.newThousandUsers);
+    $("#editDailyTopContributionHeat").value = toNumber(daily.topContributionHeat);
     $("#editDailySRate").value = Math.round(toNumber(daily.sRevenueRate) * 1000) / 10;
     $("#editDailyDescription").value = daily.description || "";
     $("#dailyMetrics").hidden = true;
@@ -1157,6 +1152,8 @@
       revenue: Math.max(0, toNumber($("#editDailyRevenue").value)),
       paidUsers: Math.max(0, Math.trunc(toNumber($("#editDailyPaidUsers").value))),
       thousandTicketUsers: Math.max(0, Math.trunc(toNumber($("#editDailyThousandUsers").value))),
+      newThousandUsers: Math.max(0, Math.trunc(toNumber($("#editDailyNewThousandUsers").value))),
+      topContributionHeat: Math.max(0, Math.trunc(toNumber($("#editDailyTopContributionHeat").value))),
       sRevenueRate: Math.max(0, Math.min(1, toNumber($("#editDailySRate").value) / 100)),
       description: $("#editDailyDescription").value.trim()
     };
@@ -1186,6 +1183,8 @@
           paidUsers: daily.paidUsers,
           firstPaidUsers: sameDate.reduce((sum, item) => sum + toNumber(item.firstPaidUsers), 0),
           thousandTicketUsers: daily.thousandTicketUsers,
+          newThousandUsers: daily.newThousandUsers,
+          topContributionHeat: daily.topContributionHeat,
           potentialUsers: daily.thousandTicketUsers,
           sRevenue: Math.round(daily.revenue * daily.sRevenueRate * 100) / 100,
           createdAt: sameDate[0]?.createdAt || new Date().toISOString(),
@@ -1269,6 +1268,8 @@
       metricCard("日收入", formatCurrency(daily.revenue)),
       metricCard("支持用户数", `${daily.paidUsers} 人`),
       metricCard("千票人数", `${daily.thousandTicketUsers || 0} 人`),
+      metricCard("新千票人数", `${daily.newThousandUsers || 0} 人`),
+      metricCard("榜一贡献", `${daily.topContributionHeat || 0}`),
       metricCard("S级用户支持率", formatPercent(daily.sRevenueRate)),
       metricCard("直播描述", daily.description || "暂无描述")
     ].join("");
@@ -1473,6 +1474,8 @@
     $("#captureRevenue").value = 0;
     $("#captureGiftUsers").value = 0;
     $("#captureThousandTicketUsers").value = 0;
+    $("#captureNewThousandUsers").value = 0;
+    $("#captureTopContributionHeat").value = 0;
     $("#captureSRate").value = 0;
     $("#imageInput").value = "";
     $("#recognizeProgress").hidden = true;
@@ -1529,8 +1532,10 @@
       revenue: toNumber($("#captureRevenue").value),
       giftUsers: toNumber($("#captureGiftUsers").value),
       thousandTicketUsers: toNumber($("#captureThousandTicketUsers").value),
+      newThousandUsers: toNumber($("#captureNewThousandUsers").value),
+      topContributionHeat: toNumber($("#captureTopContributionHeat").value),
       sRevenueRate: Math.max(0, Math.min(1, toNumber($("#captureSRate").value) / 100)),
-      newGiftUsers: 0,
+      newGiftUsers: toNumber($("#captureNewThousandUsers").value),
       score: 0
     };
   }
@@ -1541,6 +1546,8 @@
       ["captureRevenue", summary.revenue],
       ["captureGiftUsers", summary.giftUsers],
       ["captureThousandTicketUsers", summary.thousandTicketUsers],
+      ["captureNewThousandUsers", summary.newThousandUsers],
+      ["captureTopContributionHeat", summary.topContributionHeat],
       ["captureSRate", summary.sRevenueRate === undefined ? undefined : toNumber(summary.sRevenueRate) * 100]
     ];
     fields.forEach(([id, value]) => {
@@ -1553,13 +1560,15 @@
   }
 
   function captureSummaryToText(summary = collectCaptureSummary()) {
-    const hasLiveData = summary.revenue || summary.giftUsers || summary.thousandTicketUsers || summary.sRevenueRate;
+    const hasLiveData = summary.revenue || summary.giftUsers || summary.thousandTicketUsers || summary.newThousandUsers || summary.topContributionHeat || summary.sRevenueRate;
     if (!hasLiveData) return "";
     return [
       summary.date ? `日期：${summary.date}` : "",
       summary.revenue ? `本场总收入：${summary.revenue}` : "",
       summary.giftUsers ? `送礼人数：${summary.giftUsers}` : "",
       summary.thousandTicketUsers ? `榜单≥1000人数：${summary.thousandTicketUsers}` : "",
+      summary.newThousandUsers ? `新千票人数：${summary.newThousandUsers}` : "",
+      summary.topContributionHeat ? `榜一贡献：${summary.topContributionHeat}` : "",
       summary.sRevenueRate ? `S级用户支持率：${Math.round(summary.sRevenueRate * 1000) / 10}%` : ""
     ].filter(Boolean).join("\n");
   }
@@ -1767,7 +1776,9 @@
       revenue: toNumber($("#captureRevenue").value),
       giftUsers: toNumber($("#captureGiftUsers").value),
       thousandTicketUsers: toNumber($("#captureThousandTicketUsers").value),
-      newGiftUsers: candidates.filter((audience) => audience.isFirstGift && toNumber(audience.contributionHeat) >= MIN_PROFILE_PROMPT_HEAT).length,
+      newThousandUsers: toNumber($("#captureNewThousandUsers").value),
+      topContributionHeat: toNumber($("#captureTopContributionHeat").value),
+      newGiftUsers: toNumber($("#captureNewThousandUsers").value),
       sRevenueRate: Math.max(0, Math.min(1, toNumber($("#captureSRate").value) / 100)),
       score: 0
     };
@@ -1850,7 +1861,9 @@
       revenue: summary.revenue,
       paidUsers: summary.giftUsers,
       thousandTicketUsers: summary.thousandTicketUsers,
-      firstPaidUsers: summary.newGiftUsers,
+      newThousandUsers: summary.newThousandUsers,
+      topContributionHeat: summary.topContributionHeat,
+      firstPaidUsers: summary.newGiftUsers || summary.newThousandUsers,
       potentialUsers: summary.thousandTicketUsers,
       sRevenue: Math.round(toNumber(summary.revenue) * toNumber(summary.sRevenueRate) * 100) / 100,
       score: summary.score,
@@ -1889,6 +1902,8 @@
     $("#captureRevenue").value = 0;
     $("#captureGiftUsers").value = 0;
     $("#captureThousandTicketUsers").value = 0;
+    $("#captureNewThousandUsers").value = 0;
+    $("#captureTopContributionHeat").value = 0;
     if (images.length > MAX_LIVE_IMAGES) showToast("最多识别两张图片，已自动取前两张");
     renderImagePreviews();
     setImportStatus(`已选择 ${state.selectedImages.length} 张图片，请点击“解析”。备注可自行填写，不会被识图结果覆盖。`);
@@ -1920,6 +1935,11 @@
     ).size;
     const thousandTicketUsers = reportedThousandTicketUsers[0] || recognizedThousandTicketUsers;
     const rankedSupporters = allRecognizedAudience.filter((item) => toNumber(item.contributionHeat) > 0);
+    const newThousandUsers = allRecognizedAudience.filter((item) => item.isFirstGift && toNumber(item.contributionHeat) > 1000).length;
+    const topContributionHeat = toNumber(
+      allRecognizedAudience.find((item) => toNumber(item.rank) === 1)?.contributionHeat
+      ?? allRecognizedAudience[0]?.contributionHeat
+    );
     const sSupporters = rankedSupporters.filter((item) => findSUserByAudience(item));
     const reportedTotalHeat = Math.max(0, ...results.map((result) => toNumber(result?.data?.summary?.totalHeat)));
     const totalHeat = reportedTotalHeat || rankedSupporters.reduce((sum, item) => sum + toNumber(item.contributionHeat), 0);
@@ -1933,6 +1953,8 @@
       if (recognizedGiftUsers || rankedSupporters.length) $("#captureGiftUsers").value = recognizedGiftUsers || rankedSupporters.length;
       if (thousandTicketUsers) $("#captureThousandTicketUsers").value = thousandTicketUsers;
     }
+    $("#captureNewThousandUsers").value = newThousandUsers;
+    $("#captureTopContributionHeat").value = topContributionHeat;
     $("#captureSRate").value = (sRevenueRate * 100).toFixed(1);
 
     return {
@@ -2399,16 +2421,14 @@
       state.userFormDraft = null;
     });
 
-    ["imageInput", "albumInput", "cameraInput"].forEach((id) => {
-      const input = document.getElementById(id);
-      input?.addEventListener("change", (event) => setSelectedImages(event.target.files));
-    });
+    $("#imageInput").addEventListener("change", (event) => setSelectedImages(event.target.files));
     $("#captureDate").addEventListener("change", updateCaptureDateDisplay);
     const dropzone = $("#dropzone");
     dropzone.addEventListener("click", (event) => {
       if (event.target.matches("input[type='file']")) return;
       event.preventDefault();
-      openUploadSourceDialog();
+      $("#imageInput").value = "";
+      $("#imageInput").click();
     });
     ["dragenter", "dragover"].forEach((type) => {
       dropzone.addEventListener(type, (event) => {
@@ -2423,9 +2443,6 @@
       });
     });
     dropzone.addEventListener("drop", (event) => setSelectedImages(event.dataTransfer.files));
-    $$("[data-upload-source]").forEach((button) => {
-      button.addEventListener("click", () => triggerUploadSource(button.dataset.uploadSource));
-    });
     $("#parseBtn").addEventListener("click", parseCapture);
     $("#recordBtn").addEventListener("click", parseAndSave);
   }

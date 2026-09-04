@@ -176,6 +176,8 @@
     const giftUsersMatch = cleaned.match(/(?:送礼人数|支持人数|送礼用户)\s*[:：]?\s*(\d+)/);
     const thousandTicketUsersMatch = cleaned.match(/(?:千票人数|千票用户)\s*[:：]?\s*(\d+)/);
     const overThousandUsersMatch = cleaned.match(/(?:榜单\s*>\s*1000\s*人数)\s*[:：]?\s*(\d+)/);
+    const newThousandUsersMatch = cleaned.match(/(?:新千票人数|新千票用户)\s*[:：]?\s*(\d+)/);
+    const topContributionHeatMatch = cleaned.match(/(?:榜一贡献|榜一热度|第一名贡献|第一名热度)\s*[:：]?\s*(\d+)/);
     const sRevenueRateMatch = cleaned.match(/(?:S级用户支持率|S率)\s*[:：]?\s*(\d+(?:\.\d{1,2})?)\s*%?/i);
     const newGiftUsersMatch = cleaned.match(/(?:新用户送礼人数|新送礼用户|新用户支持人数)\s*[:：]?\s*(\d+)/);
     const scoreMatch = cleaned.match(/(?:评分|直播评分|场次评分)\s*[:：]?\s*(\d+(?:\.\d{1,2})?)/);
@@ -189,6 +191,8 @@
       revenue: Number(String(revenueMatch?.[1] || 0).replace(/[,，]/g, "")),
       giftUsers: Number(giftUsersMatch?.[1] || 0),
       thousandTicketUsers: Number(thousandTicketUsersMatch?.[1] || overThousandUsersMatch?.[1] || 0),
+      newThousandUsers: Number(newThousandUsersMatch?.[1] || 0),
+      topContributionHeat: Number(topContributionHeatMatch?.[1] || 0),
       newGiftUsers: Number(newGiftUsersMatch?.[1] || 0),
       sRevenueRate: Math.max(0, Math.min(1, Number(sRevenueRateMatch?.[1] || 0) / 100)),
       score: Number(scoreMatch?.[1] || 0)
