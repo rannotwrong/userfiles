@@ -847,7 +847,7 @@ textarea {
 
 .trend-page {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-4);
 }
 .trend-head,
 .trend-plan-card,
@@ -863,16 +863,16 @@ textarea {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: 20px;
+  padding: 18px 20px;
 }
 .trend-head h2,
 .trend-section-head h3 {
   margin: 0;
   letter-spacing: -.03em;
 }
-.trend-head h2 { font-size: 24px; }
+.trend-head h2 { font-size: 22px; }
 .trend-plan-card {
-  padding: 20px;
+  padding: 18px;
 }
 .trend-plan-head {
   display: flex;
@@ -913,7 +913,7 @@ textarea {
 }
 .trend-plan-head h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   letter-spacing: -.02em;
 }
 .plan-grid {
@@ -923,16 +923,17 @@ textarea {
 }
 .plan-field {
   display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3);
+  gap: 6px;
+  padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: linear-gradient(180deg, rgba(248, 251, 255, .86), rgba(255, 255, 255, .96));
 }
 .plan-field span {
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
 }
 .plan-field input {
   width: 100%;
@@ -941,17 +942,17 @@ textarea {
   border: 0;
   border-radius: 0;
   background: transparent;
-  font-size: clamp(22px, 3vw, 30px);
-  font-weight: 780;
-  line-height: 1.08;
-  letter-spacing: -.04em;
+  font-size: clamp(18px, 2.2vw, 22px);
+  font-weight: 760;
+  line-height: 1.15;
+  letter-spacing: -.025em;
 }
 .plan-field input:focus-visible {
   outline: 0;
   box-shadow: inset 0 -2px 0 rgba(18, 184, 200, .45);
 }
 .trend-section {
-  padding: 20px;
+  padding: 18px;
 }
 .trend-section-head {
   display: flex;
@@ -975,6 +976,7 @@ textarea {
 .period-control {
   gap: var(--space-2);
 }
+.month-nav,
 .daily-nav {
   display: inline-flex;
   align-items: center;
@@ -982,30 +984,34 @@ textarea {
   gap: var(--space-2);
   flex: 0 0 auto;
 }
-.day-nav-btn {
-  width: 34px;
-  height: 34px;
+.day-nav-btn,
+.month-nav-btn {
+  width: 32px;
+  height: 32px;
   display: inline-grid;
   place-items: center;
   border: 1px solid rgba(18, 184, 200, .18);
   border-radius: 999px;
   color: var(--primary-ink);
   background: var(--primary-soft);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 760;
   line-height: 1;
   box-shadow: var(--shadow-sm);
 }
-.day-nav-btn:hover {
+.day-nav-btn:hover,
+.month-nav-btn:hover {
   color: white;
   background: var(--primary);
 }
 .date-picker-control,
-.date-field-control {
+.date-field-control,
+.month-picker-control {
   position: relative;
 }
 .date-picker-control strong,
-.date-field-control strong {
+.date-field-control strong,
+.month-picker-control strong {
   color: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -1025,7 +1031,8 @@ textarea {
   font-size: 16px;
 }
 .date-picker-control input,
-.date-field-control input {
+.date-field-control input,
+.month-picker-control input {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1035,7 +1042,8 @@ textarea {
   cursor: pointer;
 }
 .date-picker-control:focus-within,
-.date-field-control:focus-within {
+.date-field-control:focus-within,
+.month-picker-control:focus-within {
   outline: 2px solid rgba(18, 184, 200, .32);
   outline-offset: 2px;
 }
@@ -1057,6 +1065,7 @@ textarea {
   outline-offset: 2px;
 }
 .period-control.date-picker-control input,
+.period-control.month-picker-control input,
 .date-field-control input {
   width: 100%;
   min-width: 0;
@@ -1069,8 +1078,8 @@ textarea {
   gap: var(--space-3);
 }
 .metric-card {
-  min-height: 106px;
-  padding: var(--space-4);
+  min-height: 86px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background:
@@ -1079,16 +1088,18 @@ textarea {
 }
 .metric-card strong {
   display: block;
-  margin-top: var(--space-2);
+  margin-top: 6px;
   color: var(--text);
-  font-size: clamp(22px, 3vw, 30px);
-  line-height: 1.08;
-  letter-spacing: -.04em;
+  font-size: clamp(18px, 2.2vw, 22px);
+  font-weight: 760;
+  line-height: 1.18;
+  letter-spacing: -.025em;
 }
 .metric-card span {
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
 }
 .metric-card small {
   display: block;
@@ -1571,9 +1582,11 @@ dialog::backdrop {
     width: 100%;
     justify-content: space-between;
   }
+  .month-nav,
   .daily-nav {
     width: 100%;
   }
+  .month-nav .period-control,
   .daily-nav .period-control {
     flex: 1;
   }

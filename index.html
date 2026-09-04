@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户日记">
   <title>用户日记 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260903-profile-mobile-single">
+  <link rel="stylesheet" href="./styles.css?v=20260904-crm-trend-layout">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -212,10 +212,15 @@
             </div>
             <div class="plan-head-actions">
               <span class="plan-status" id="monthPlanStatus" data-status="active">进行中</span>
-              <label class="period-control" for="monthPlanPeriod">
-                <span>目标月份</span>
-                <input id="monthPlanPeriod" type="month">
-              </label>
+              <div class="month-nav">
+                <button class="month-nav-btn" id="prevMonthPlanBtn" type="button" aria-label="查看上个月目标">‹</button>
+                <label class="period-control month-picker-control" for="monthPlanPeriod" style="position: relative;">
+                  <span>目标月份</span>
+                  <strong id="monthPlanPeriodLabel">2026年09月</strong>
+                  <input id="monthPlanPeriod" type="month" aria-label="选择目标月份">
+                </label>
+                <button class="month-nav-btn" id="nextMonthPlanBtn" type="button" aria-label="查看下个月目标">›</button>
+              </div>
             </div>
           </div>
           <div class="plan-grid">
@@ -665,7 +670,7 @@
   <script src="./cloudStore.js?v=20260902-plan-date-ocr"></script>
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260903-fast-ocr-bg"></script>
-  <script src="./app.js?v=20260903-upload-source"></script>
+  <script src="./app.js?v=20260904-crm-trend-layout"></script>
 
 
 

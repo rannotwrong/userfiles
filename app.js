@@ -84,6 +84,13 @@
     return next;
   }
 
+  function addMonths(monthKey, offset) {
+    const [year, month] = String(monthKey || toMonthKey(new Date())).split("-").map(Number);
+    const base = year && month ? new Date(year, month - 1, 1) : new Date();
+    base.setMonth(base.getMonth() + offset);
+    return toMonthKey(base);
+  }
+
   function startOfISOWeek(value = new Date()) {
     const date = value instanceof Date ? new Date(value) : new Date(value);
     if (Number.isNaN(date.getTime())) return new Date();
@@ -343,6 +350,16 @@
     const dates = getInteractionDates(user, false);
     if (!dates.length) return "";
     return dateOnlyISOString(new Date(Math.max(...dates.map((date) => date.getTime()))));
+  }
+
+  function getFirstPaidInteractionDate(user = {}) {
+    if (user.firstInteraction) return dateOnlyISOString(user.firstInteraction);
+    const paidDates = (Array.isArray(user.interactions) ? user.interactions : [])
+      .filter((item) => item.supported || toNumber(item.spendAmount) > 0)
+      .map((item) => new Date(item.time || item.date || ""))
+      .filter((date) => !Number.isNaN(date.getTime()));
+    if (!paidDates.length) return "";
+    return dateOnlyISOString(new Date(Math.min(...paidDates.map((date) => date.getTime()))));
   }
 
   function normalizeUser(user, options = {}) {
@@ -815,6 +832,7 @@
   function renderMonthPlan(monthKey, monthlyRevenue) {
     const plan = getMonthPlan(monthKey, monthlyRevenue);
     $("#monthPlanPeriod").value = monthKey;
+    $("#monthPlanPeriodLabel").textContent = formatChineseMonth(monthKey);
     $("#monthPlanTitle").textContent = `${formatChineseMonth(monthKey)}目标`;
     $("#monthLiveCount").value = plan.liveCount;
     $("#monthTargetRevenue").value = plan.targetRevenue;
@@ -1079,28 +1097,38 @@
     input.click();
   }
 
-  function countProfilesCreatedInRange(start, end) {
+  function countProfilesFirstPaidInRange(start, end) {
     const startTime = start.getTime();
     const endTime = end.getTime();
     return state.users.filter((user) => {
-      const createdAt = new Date(user.createdAt || "");
-      const time = createdAt.getTime();
+      const firstPaidAt = new Date(getFirstPaidInteractionDate(user));
+      const time = firstPaidAt.getTime();
       return Number.isFinite(time) && time >= startTime && time < endTime;
     }).length;
   }
 
   function countWeeklyNewProfiles(weekValue) {
     const start = weekInputToStartDate(weekValue);
-    return countProfilesCreatedInRange(start, addDays(start, 7));
+    return countProfilesFirstPaidInRange(start, addDays(start, 7));
   }
 
   function countMonthlyNewProfiles(monthKey) {
     const [year, month] = String(monthKey || "").split("-").map(Number);
     if (!year || !month) return 0;
-    return countProfilesCreatedInRange(
+    return countProfilesFirstPaidInRange(
       new Date(year, month - 1, 1),
       new Date(year, month, 1)
     );
+  }
+
+  function setMonthPlanPeriod(monthKey) {
+    state.trendFilters.monthPlanPeriod = monthKey || toMonthKey(new Date());
+    const monthly = getMonthlyTrend(state.trends || emptyTrends(), state.trendFilters.monthPlanPeriod);
+    renderMonthPlan(state.trendFilters.monthPlanPeriod, monthly.revenue);
+  }
+
+  function shiftMonthPlanPeriod(offset) {
+    setMonthPlanPeriod(addMonths(state.trendFilters.monthPlanPeriod, offset));
   }
 
   function closeDailyEditor() {
@@ -2206,10 +2234,10 @@
       renderTrends();
     });
     $("#monthPlanPeriod").addEventListener("change", (event) => {
-      state.trendFilters.monthPlanPeriod = event.target.value || toMonthKey(new Date());
-      const monthly = getMonthlyTrend(state.trends || emptyTrends(), state.trendFilters.monthPlanPeriod);
-      renderMonthPlan(state.trendFilters.monthPlanPeriod, monthly.revenue);
+      setMonthPlanPeriod(event.target.value || toMonthKey(new Date()));
     });
+    $("#prevMonthPlanBtn").addEventListener("click", () => shiftMonthPlanPeriod(-1));
+    $("#nextMonthPlanBtn").addEventListener("click", () => shiftMonthPlanPeriod(1));
     ["monthTargetRevenue", "monthForecastRevenue"].forEach((id) => {
       $(`#${id}`).addEventListener("input", saveMonthPlan);
     });
