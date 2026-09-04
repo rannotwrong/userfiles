@@ -495,6 +495,18 @@
     return Date.now() - new Date(user.lastInteraction).getTime() > 30 * 86400000;
   }
 
+  function isActiveWithinDays(user, days) {
+    if (!user.lastInteraction) return false;
+    const time = new Date(user.lastInteraction).getTime();
+    if (!Number.isFinite(time)) return false;
+    return Date.now() - time <= days * 86400000;
+  }
+
+  function needsMaintenance(user) {
+    if (!["S", "A"].includes(user.tier)) return false;
+    return !isActiveWithinDays(user, 7);
+  }
+
   function showToast(message) {
     const toast = $("#toast");
     toast.textContent = message;
@@ -671,6 +683,8 @@
         firstInteraction.getMonth() === now.getMonth() &&
         firstInteraction.getFullYear() === now.getFullYear();
     }).length;
+    $("#statActive7").textContent = state.users.filter((user) => isActiveWithinDays(user, 7)).length;
+    $("#statMaintenance").textContent = state.users.filter(needsMaintenance).length;
   }
 
   function emptyStateHTML() {

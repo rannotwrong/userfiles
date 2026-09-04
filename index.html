@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f5f8fc">
   <meta name="description" content="为个人运营者设计的云端用户日记">
   <title>用户日记 · User Atlas</title>
-  <link rel="stylesheet" href="./styles.css?v=20260904-live-extra-metrics">
+  <link rel="stylesheet" href="./styles.css?v=20260904-crm-stats">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -83,6 +83,22 @@
           <span class="stat-label">本月新增</span>
           <strong id="statNew">0</strong>
           <small>首次互动在本月</small>
+        </article>
+        <article class="stat">
+          <span class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"></path></svg>
+          </span>
+          <span class="stat-label">近7天活跃</span>
+          <strong id="statActive7">0</strong>
+          <small>最近仍在互动</small>
+        </article>
+        <article class="stat">
+          <span class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"></path></svg>
+          </span>
+          <span class="stat-label">待维护用户</span>
+          <strong id="statMaintenance">0</strong>
+          <small>S/A级超7天未互动</small>
         </article>
       </section>
 
@@ -656,7 +672,7 @@
   <script src="./cloudStore.js?v=20260902-plan-date-ocr"></script>
   <script src="./mock.js?v=20260826-auth-stats"></script>
   <script src="./api.js?v=20260904-live-extra-metrics"></script>
-  <script src="./app.js?v=20260904-live-extra-metrics"></script>
+  <script src="./app.js?v=20260904-crm-stats"></script>
 
 
 

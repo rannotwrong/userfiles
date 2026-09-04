@@ -1436,6 +1436,7 @@ dialog::backdrop {
 }
 
 @media (min-width: 1024px) {
+  .stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .trend-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metric-grid-five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .workspace {
